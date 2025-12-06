@@ -9,3 +9,8 @@ tsconfig.tsbuildinfo
 private/
 .replit
 replit.nix
+# User-specific Obsidian vault files
+obsidian-vault
+# AI tools
+.claude/
+.serena/

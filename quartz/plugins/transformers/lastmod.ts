@@ -14,8 +14,15 @@ const defaultOptions: Options = {
 
 // YYYY-MM-DD
 const iso8601DateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/
+// YYYY-MM-DD HH:mm (common Obsidian format)
+const dateTimeSpaceRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/
 
 function coerceDate(fp: string, d: any): Date {
+  // handle null or undefined
+  if (d === null || d === undefined) {
+    return new Date()
+  }
+
   // check ISO8601 date-only format
   // we treat this one as local midnight as the normal
   // js date ctor treats YYYY-MM-DD as UTC midnight
@@ -23,9 +30,15 @@ function coerceDate(fp: string, d: any): Date {
     d = `${d}T00:00:00`
   }
 
+  // check YYYY-MM-DD HH:mm format (Obsidian default)
+  // convert space to T for ISO8601 compliance
+  if (typeof d === "string" && dateTimeSpaceRegex.test(d)) {
+    d = d.replace(" ", "T")
+  }
+
   const dt = new Date(d)
   const invalidDate = isNaN(dt.getTime()) || dt.getTime() === 0
-  if (invalidDate && d !== undefined) {
+  if (invalidDate && d !== null && d !== undefined) {
     console.log(
       styleText(
         "yellow",
