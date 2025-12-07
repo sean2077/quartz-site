@@ -3,9 +3,9 @@
 .toc {
   display: flex;
   flex-direction: column;
-  overflow-y: hidden;
+  overflow: hidden;
   min-height: 1.4rem;
-  flex: 0 0.5 auto;
+  flex: 1 1 auto;
   &:has(button.toc-header.collapsed) {
     flex: 0 1 1.4rem;
   }
@@ -44,8 +44,8 @@ ul.toc-content.overflow {
   margin: 0.5rem 0;
   padding: 0;
   max-height: calc(100% - 2rem);
+  overflow-y: auto;
   overscroll-behavior: contain;
-  list-style: none;
 
   & > li > a {
     color: var(--dark);
