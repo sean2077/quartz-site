@@ -226,6 +226,28 @@ export interface TransformOptions {
   allSlugs: FullSlug[]
 }
 
+/**
+ * Check if a slug represents a folder note (folder/folder.md pattern)
+ */
+function isFolderNoteSlug(slug: string): boolean {
+  const parts = slug.split("/")
+  if (parts.length < 2) return false
+
+  const fileName = parts[parts.length - 1]
+  const folderName = parts[parts.length - 2]
+
+  return fileName === folderName
+}
+
+/**
+ * Get the folder path from a folder note slug
+ * e.g., "some/path/folder/folder" -> "some/path/folder"
+ */
+function getFolderFromSlug(slug: string): string {
+  const parts = slug.split("/")
+  return parts.slice(0, -1).join("/")
+}
+
 export function transformLink(src: FullSlug, target: string, opts: TransformOptions): RelativeURL {
   let targetSlug = transformInternalLink(target)
 
@@ -247,11 +269,29 @@ export function transformLink(src: FullSlug, target: string, opts: TransformOpti
       // only match, just use it
       if (matchingFileNames.length === 1) {
         const targetSlug = matchingFileNames[0]
+        // Check if the target is a folder note - if so, use the folder path with trailing slash
+        if (isFolderNoteSlug(targetSlug)) {
+          const folderPath = getFolderFromSlug(targetSlug)
+          return (resolveRelative(src, folderPath as FullSlug) + "/" + targetAnchor) as RelativeURL
+        }
         return (resolveRelative(src, targetSlug) + targetAnchor) as RelativeURL
       }
     }
 
     // if it's not unique, then it's the absolute path from the vault root
+    // Also check if the canonical slug matches a folder note pattern
+    const matchingFolderNotes = opts.allSlugs.filter((slug) => {
+      if (!isFolderNoteSlug(slug)) return false
+      const parts = slug.split("/")
+      const fileName = parts.at(-1)
+      return targetCanonical === fileName || slug === targetCanonical
+    })
+
+    if (matchingFolderNotes.length === 1) {
+      const folderPath = getFolderFromSlug(matchingFolderNotes[0])
+      return (joinSegments(pathToRoot(src), folderPath) + "/" + targetAnchor) as RelativeURL
+    }
+
     return (joinSegments(pathToRoot(src), canonicalSlug) + folderTail) as RelativeURL
   }
 }
