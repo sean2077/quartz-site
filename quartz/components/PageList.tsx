@@ -52,6 +52,25 @@ export function byDateAndAlphabeticalFolderFirst(cfg: GlobalConfiguration): Sort
   }
 }
 
+/**
+ * Sort by natural order (numeric-aware) with folders first
+ * This handles titles like "01.栈", "02.队列", "10.ST 表" correctly
+ */
+export function byNaturalOrderFolderFirst(): SortFn {
+  return (f1, f2) => {
+    // Sort folders first
+    const f1IsFolder = isFolderPath(f1.slug ?? "")
+    const f2IsFolder = isFolderPath(f2.slug ?? "")
+    if (f1IsFolder && !f2IsFolder) return -1
+    if (!f1IsFolder && f2IsFolder) return 1
+
+    // Sort by title using natural order (numeric-aware)
+    const f1Title = f1.frontmatter?.title ?? ""
+    const f2Title = f2.frontmatter?.title ?? ""
+    return f1Title.localeCompare(f2Title, undefined, { numeric: true, sensitivity: "base" })
+  }
+}
+
 type Props = {
   limit?: number
   sort?: SortFn

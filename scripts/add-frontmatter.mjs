@@ -24,45 +24,45 @@ import yaml from "js-yaml"
 
 // 解析命令行参数
 function parseArgs() {
-    const args = process.argv.slice(2)
-    const options = {
-        dryRun: false,
-        overwrite: false,
-        directory: null,
-        property: null,
-        value: null,
+  const args = process.argv.slice(2)
+  const options = {
+    dryRun: false,
+    overwrite: false,
+    directory: null,
+    property: null,
+    value: null,
+  }
+
+  const positionalArgs = []
+
+  for (const arg of args) {
+    if (arg === "--dry-run") {
+      options.dryRun = true
+    } else if (arg === "--overwrite") {
+      options.overwrite = true
+    } else if (arg === "--help" || arg === "-h") {
+      printHelp()
+      process.exit(0)
+    } else {
+      positionalArgs.push(arg)
     }
+  }
 
-    const positionalArgs = []
+  if (positionalArgs.length < 3) {
+    console.error("❌ 错误: 缺少必要参数")
+    printHelp()
+    process.exit(1)
+  }
 
-    for (const arg of args) {
-        if (arg === "--dry-run") {
-            options.dryRun = true
-        } else if (arg === "--overwrite") {
-            options.overwrite = true
-        } else if (arg === "--help" || arg === "-h") {
-            printHelp()
-            process.exit(0)
-        } else {
-            positionalArgs.push(arg)
-        }
-    }
+  options.directory = positionalArgs[0]
+  options.property = positionalArgs[1]
+  options.value = positionalArgs[2]
 
-    if (positionalArgs.length < 3) {
-        console.error("❌ 错误: 缺少必要参数")
-        printHelp()
-        process.exit(1)
-    }
-
-    options.directory = positionalArgs[0]
-    options.property = positionalArgs[1]
-    options.value = positionalArgs[2]
-
-    return options
+  return options
 }
 
 function printHelp() {
-    console.log(`
+  console.log(`
 用法: node scripts/add-frontmatter.mjs <目录路径> <属性名> <属性值> [选项]
 
 参数:
@@ -90,141 +90,144 @@ function printHelp() {
 
 // 解析属性值，支持多种类型
 function parseValue(value) {
-    // 布尔值
-    if (value === "true") return true
-    if (value === "false") return false
+  // 布尔值
+  if (value === "true") return true
+  if (value === "false") return false
 
-    // 数字
-    if (/^-?\d+(\.\d+)?$/.test(value)) {
-        return parseFloat(value)
+  // 数字
+  if (/^-?\d+(\.\d+)?$/.test(value)) {
+    return parseFloat(value)
+  }
+
+  // JSON 数组或对象
+  if (
+    (value.startsWith("[") && value.endsWith("]")) ||
+    (value.startsWith("{") && value.endsWith("}"))
+  ) {
+    try {
+      return JSON.parse(value)
+    } catch {
+      // 解析失败，保持为字符串
     }
+  }
 
-    // JSON 数组或对象
-    if ((value.startsWith("[") && value.endsWith("]")) || (value.startsWith("{") && value.endsWith("}"))) {
-        try {
-            return JSON.parse(value)
-        } catch {
-            // 解析失败，保持为字符串
-        }
-    }
-
-    // 默认为字符串
-    return value
+  // 默认为字符串
+  return value
 }
 
 // 处理单个文件
 async function processFile(filePath, options) {
-    const { property, value, dryRun, overwrite } = options
+  const { property, value, dryRun, overwrite } = options
 
-    try {
-        const content = await fs.readFile(filePath, "utf-8")
+  try {
+    const content = await fs.readFile(filePath, "utf-8")
 
-        // 使用 gray-matter 解析 frontmatter
-        const parsed = matter(content, {
-            engines: {
-                yaml: (s) => yaml.load(s, { schema: yaml.JSON_SCHEMA }),
-            },
-        })
+    // 使用 gray-matter 解析 frontmatter
+    const parsed = matter(content, {
+      engines: {
+        yaml: (s) => yaml.load(s, { schema: yaml.JSON_SCHEMA }),
+      },
+    })
 
-        const parsedValue = parseValue(value)
-        let action
+    const parsedValue = parseValue(value)
+    let action
 
-        // 检查属性是否已存在
-        if (property in parsed.data) {
-            if (overwrite) {
-                parsed.data[property] = parsedValue
-                action = "更新"
-            } else {
-                return { status: "skipped", reason: "属性已存在" }
-            }
-        } else {
-            parsed.data[property] = parsedValue
-            action = "添加"
-        }
-
-        // 使用 gray-matter 重新生成文件内容
-        const newContent = matter.stringify(parsed.content, parsed.data, {
-            engines: {
-                yaml: {
-                    stringify: (obj) =>
-                        yaml.dump(obj, {
-                            schema: yaml.JSON_SCHEMA,
-                            lineWidth: -1, // 不自动换行
-                            quotingType: '"',
-                            forceQuotes: false,
-                        }),
-                },
-            },
-        })
-
-        if (!dryRun) {
-            await fs.writeFile(filePath, newContent, "utf-8")
-        }
-
-        return { status: "modified", action }
-    } catch (error) {
-        return { status: "error", reason: error.message }
+    // 检查属性是否已存在
+    if (property in parsed.data) {
+      if (overwrite) {
+        parsed.data[property] = parsedValue
+        action = "更新"
+      } else {
+        return { status: "skipped", reason: "属性已存在" }
+      }
+    } else {
+      parsed.data[property] = parsedValue
+      action = "添加"
     }
+
+    // 使用 gray-matter 重新生成文件内容
+    const newContent = matter.stringify(parsed.content, parsed.data, {
+      engines: {
+        yaml: {
+          stringify: (obj) =>
+            yaml.dump(obj, {
+              schema: yaml.JSON_SCHEMA,
+              lineWidth: -1, // 不自动换行
+              quotingType: '"',
+              forceQuotes: false,
+            }),
+        },
+      },
+    })
+
+    if (!dryRun) {
+      await fs.writeFile(filePath, newContent, "utf-8")
+    }
+
+    return { status: "modified", action }
+  } catch (error) {
+    return { status: "error", reason: error.message }
+  }
 }
 
 async function main() {
-    const options = parseArgs()
-    const { directory, property, value, dryRun } = options
+  const options = parseArgs()
+  const { directory, property, value, dryRun } = options
 
-    console.log(`\n📁 目录: ${directory}`)
-    console.log(`📝 属性: ${property}: ${value}`)
-    console.log(`🔧 模式: ${dryRun ? "预览模式 (dry-run)" : "实际修改"}`)
-    console.log(`📋 覆盖: ${options.overwrite ? "是" : "否"}\n`)
+  console.log(`\n📁 目录: ${directory}`)
+  console.log(`📝 属性: ${property}: ${value}`)
+  console.log(`🔧 模式: ${dryRun ? "预览模式 (dry-run)" : "实际修改"}`)
+  console.log(`📋 覆盖: ${options.overwrite ? "是" : "否"}\n`)
 
-    // 检查目录是否存在
-    try {
-        await fs.access(directory)
-    } catch {
-        console.error(`❌ 错误: 目录不存在: ${directory}`)
-        process.exit(1)
+  // 检查目录是否存在
+  try {
+    await fs.access(directory)
+  } catch {
+    console.error(`❌ 错误: 目录不存在: ${directory}`)
+    process.exit(1)
+  }
+
+  // 查找所有 md 文件
+  const pattern = path.join(directory, "**/*.md").replace(/\\/g, "/")
+  const files = await globby(pattern)
+
+  if (files.length === 0) {
+    console.log("⚠️ 未找到任何 .md 文件")
+    return
+  }
+
+  console.log(`🔍 找到 ${files.length} 个 .md 文件\n`)
+
+  const results = {
+    modified: 0,
+    skipped: 0,
+    errors: 0,
+  }
+
+  for (const file of files) {
+    const relativePath = path.relative(process.cwd(), file)
+    const result = await processFile(file, options)
+
+    if (result.status === "modified") {
+      console.log(`✅ ${dryRun ? "[预览]" : ""} ${result.action}: ${relativePath}`)
+      results.modified++
+    } else if (result.status === "skipped") {
+      console.log(`⏭️  跳过: ${relativePath} (${result.reason})`)
+      results.skipped++
+    } else if (result.status === "error") {
+      console.log(`❌ 错误: ${relativePath} (${result.reason})`)
+      results.errors++
     }
+  }
 
-    // 查找所有 md 文件
-    const pattern = path.join(directory, "**/*.md").replace(/\\/g, "/")
-    const files = await globby(pattern)
+  console.log(`\n📊 统计:`)
+  console.log(`   ${dryRun ? "将修改" : "已修改"}: ${results.modified} 个文件`)
+  console.log(`   跳过: ${results.skipped} 个文件`)
+  console.log(`   错误: ${results.errors} 个文件`)
 
-    if (files.length === 0) {
-        console.log("⚠️ 未找到任何 .md 文件")
-        return
-    }
-
-    console.log(`🔍 找到 ${files.length} 个 .md 文件\n`)
-
-    const results = {
-        modified: 0,
-        skipped: 0,
-        errors: 0,
-    }
-
-    for (const file of files) {
-        const relativePath = path.relative(process.cwd(), file)
-        const result = await processFile(file, options)
-
-        if (result.status === "modified") {
-            console.log(`✅ ${dryRun ? "[预览]" : ""} ${result.action}: ${relativePath}`)
-            results.modified++
-        } else if (result.status === "skipped") {
-            console.log(`⏭️  跳过: ${relativePath} (${result.reason})`)
-            results.skipped++
-        } else if (result.status === "error") {
-            console.log(`❌ 错误: ${relativePath} (${result.reason})`)
-            results.errors++
-        }
-    }
-
-    console.log(`\n📊 统计:`)
-    console.log(`   ${dryRun ? "将修改" : "已修改"}: ${results.modified} 个文件`)
-    console.log(`   跳过: ${results.skipped} 个文件`)
-    console.log(`   错误: ${results.errors} 个文件`)
-
-    if (dryRun && results.modified > 0) {
-        console.log(`\n💡 提示: 这是预览模式，实际文件未被修改。移除 --dry-run 参数以执行实际修改。`)
-    }
+  if (dryRun && results.modified > 0) {
+    console.log(`\n💡 提示: 这是预览模式，实际文件未被修改。移除 --dry-run 参数以执行实际修改。`)
+  }
 }
 
 main().catch(console.error)

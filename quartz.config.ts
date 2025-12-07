@@ -28,7 +28,15 @@ const config: QuartzConfig = {
       "_obscripts",
       "0*/**",
       "2*/**",
-      "9*/**",
+      // "9Z 系统区" subdirectories exclusion:
+      // Exclude all subdirectories except "附件" (attachments)
+      // Note: extglob patterns like "9Z 系统区/!(附件)/**" don't work reliably in micromatch
+      // So we list specific subdirectories to exclude explicitly
+      "9Z 系统区/背景/**",
+      "9Z 系统区/模板/**",
+      "9Z 系统区/示例/**",
+      "9Z 系统区/*.md", // Exclude markdown files in the root of 9Z 系统区
+      // The "9Z 系统区/附件" folder is NOT excluded so OnDemandAssets can copy referenced images
       "1Y LeetCode/**", // leetcode 问题库
     ],
     defaultDateType: "modified",
@@ -87,22 +95,26 @@ const config: QuartzConfig = {
       Plugin.Latex({
         renderEngine: "katex",
         katexOptions: {
-          strict: false
-        }
+          strict: false,
+        },
       }),
+      // Custom plugins for on-demand assets and folder notes
+      Plugin.CollectAssets(),
+      Plugin.MarkFolderNotes(),
+      // Note: StoreFolderNotes is no longer needed - FolderNotes filter now stores folder notes
     ],
-    filters: [Plugin.RemoveDrafts(), Plugin.ExplicitPublish()],
+    filters: [Plugin.RemoveDrafts(), Plugin.ExplicitPublish(), Plugin.FolderNotes()],
     emitters: [
       Plugin.AliasRedirects(),
       Plugin.ComponentResources(),
       Plugin.ContentPage(),
-      Plugin.FolderPage(),
+      Plugin.FolderNotePage(),
       Plugin.TagPage(),
       Plugin.ContentIndex({
         enableSiteMap: true,
         enableRSS: true,
       }),
-      Plugin.Assets(),
+      Plugin.OnDemandAssets(),
       Plugin.Static(),
       Plugin.Favicon(),
       Plugin.NotFoundPage(),

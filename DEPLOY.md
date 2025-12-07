@@ -1,34 +1,131 @@
 # Quartz 部署指南
 
-本指南将详细介绍如何将您的 Quartz 网站部署到 Cloudflare Pages。
+本指南详细介绍如何将 Quartz 网站手动部署到 Cloudflare Pages。
 
-## 1. Cloudflare Pages (推荐)
+## 前置条件
 
-Cloudflare Pages 是部署 Quartz 最简单的方式，提供极佳的全球性能和免费的 SSL 证书。
+- Node.js v22+
+- npm v10.9.2+
+- Cloudflare 账号
 
-### 方法 A: 连接 Git (最简单)
-1.  将您的 Quartz 代码推送到 GitHub 仓库。
-2.  登录 [Cloudflare 控制台](https://dash.cloudflare.com/)。
-3.  进入 **Workers & Pages** > **Create Application** > **Pages** > **Connect to Git**。
-4.  选择您的仓库。
-5.  配置构建设置：
-    *   **Framework Preset (框架预设)**: 选 `None` (如果可选 `Quartz` 也可以，但通常 `None` 配合自定义命令最稳妥)。
-    *   **Build command (构建命令)**: `npx quartz build`
-    *   **Build output directory (输出目录)**: `public`
-    *   **Environment Variables (环境变量)**:
-        *   `NODE_VERSION`: `22` (或 `18.14.0` 及以上)
-6.  点击 **Save and Deploy**。
+## 本地构建
 
-### 方法 B: 直接上传 (CLI 命令行)
-如果您更喜欢在本地构建然后上传：
-1.  安装 Wrangler: `npm install -g wrangler`
-2.  登录: `npx wrangler login`
-3.  构建网站: `npx quartz build`
-4.  部署: `npx wrangler pages deploy public --project-name=my-quartz-site`
+```bash
+# 构建网站（输出到 public/ 目录）
+npx quartz build -d obsidian-vault --concurrency 8
 
----
+# 本地测试（模拟 Cloudflare Pages 行为）
+npx wrangler pages dev public
+# 访问 http://localhost:8788 验证
+```
 
-## 重要提示
-*   **Node 版本**: 确保构建环境使用 Node.js v18.14 或更高版本 (推荐 v20+)。
-*   **Base URL**: 如果您使用自定义域名，请务必更新 `quartz.config.ts` 中的 `baseUrl` 字段。
+## 部署到 Cloudflare Pages
 
+### 首次部署：创建项目
+
+#### 步骤 1：Cloudflare 网页端创建项目
+
+1. 登录 [Cloudflare 控制台](https://dash.cloudflare.com/)
+2. 左侧菜单选择 **Workers & Pages**
+3. 点击 **Create** 按钮
+4. 选择 **Pages** 标签
+5. 选择 **Direct Upload**（直接上传）
+6. 输入项目名称（例如：`quartz-site`）
+7. 点击 **Create project**
+
+> 注意：首次创建时会要求上传文件，可以先上传一个空目录或直接用 CLI 上传。
+
+#### 步骤 2：本地安装 Wrangler CLI
+
+```bash
+# 全局安装（推荐）
+npm install -g wrangler
+
+# 或使用 npx（无需安装）
+npx wrangler --version
+```
+
+#### 步骤 3：登录 Cloudflare
+
+```bash
+npx wrangler login
+# 浏览器会自动打开，授权登录
+```
+
+#### 步骤 4：部署
+
+```bash
+# 部署到 Cloudflare Pages （main为 production 分支）
+npx wrangler pages deploy public --project-name=sean2077 --branch=main
+
+# 如果是新项目，会提示创建，选择 Y
+```
+
+部署成功后，会显示类似：
+
+```
+✨ Deployment complete! Take a peek over at https://xxxxxxxx.quartz-site.pages.dev
+```
+
+### 后续更新部署
+
+每次更新内容后，只需重复以下步骤：
+
+```bash
+# 1. 构建
+npx quartz build -d obsidian-vault --concurrency 8
+
+# 2. 本地测试（可选）
+npx wrangler pages dev public
+
+# 3. 部署
+npx wrangler pages deploy public --project-name=quartz-site
+```
+
+可以创建一个脚本简化操作：
+
+```bash
+# deploy.sh
+#!/bin/bash
+npx quartz build -d obsidian-vault --concurrency 8 && \
+npx wrangler pages deploy public --project-name=quartz-site
+```
+
+## 配置自定义域名（可选）
+
+1. 在 Cloudflare 控制台进入项目
+2. 点击 **Custom domains** 标签
+3. 点击 **Set up a custom domain**
+4. 输入您的域名（如 `blog.example.com`）
+5. 按照提示配置 DNS 记录
+
+> 如果域名已在 Cloudflare 管理，DNS 会自动配置。
+
+## 重要配置
+
+### quartz.config.ts
+
+确保 `baseUrl` 配置正确：
+
+```typescript
+configuration: {
+  baseUrl: "your-domain.com",  // 不要包含 https:// 或尾部斜杠
+  // ...
+}
+```
+
+### 环境变量（Git 部署方式需要）
+
+如果后续改用 Git 连接部署，需要设置：
+
+- `NODE_VERSION`: `22`
+
+## 后续：CI 自动部署
+
+当工作流稳定后，可以考虑设置 GitHub Actions 自动部署：
+
+1. 在 Cloudflare 创建 API Token（Pages 部署权限）
+2. 在 GitHub 仓库添加 Secrets
+3. 创建 `.github/workflows/deploy.yml`
+
+详细步骤待后续补充。

@@ -11,6 +11,8 @@ private/
 replit.nix
 # User-specific Obsidian vault files
 obsidian-vault
+content/
+.wrangler/
 # AI tools
 .claude/
 .serena/

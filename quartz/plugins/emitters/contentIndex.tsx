@@ -7,6 +7,7 @@ import { QuartzEmitterPlugin } from "../types"
 import { toHtml } from "hast-util-to-html"
 import { write } from "./helpers"
 import { i18n } from "../../i18n"
+import { getAllFolderNotes } from "../filters/folderNotes"
 
 export type ContentIndexMap = Map<FullSlug, ContentDetails>
 export type ContentDetails = {
@@ -107,6 +108,29 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
             slug,
             filePath: file.data.relativePath!,
             title: file.data.frontmatter?.title!,
+            links: file.data.links ?? [],
+            tags: file.data.frontmatter?.tags ?? [],
+            content: file.data.text ?? "",
+            richContent: opts?.rssFullHtml
+              ? escapeHTML(toHtml(tree as Root, { allowDangerousHtml: true }))
+              : undefined,
+            date: date,
+            description: file.data.description ?? "",
+          })
+        }
+      }
+
+      // Also add folder notes to the index (they were filtered out but we need them for Explorer)
+      const folderNotes = getAllFolderNotes()
+      for (const [folderPath, [tree, file]] of folderNotes.entries()) {
+        // Use folder/index as the slug instead of folder/folder
+        const slug = joinSegments(folderPath, "index") as FullSlug
+        const date = getDate(ctx.cfg.configuration, file.data) ?? new Date()
+        if (opts?.includeEmptyFiles || (file.data.text && file.data.text !== "")) {
+          linkIndex.set(slug, {
+            slug,
+            filePath: file.data.relativePath!,
+            title: file.data.frontmatter?.title ?? folderPath,
             links: file.data.links ?? [],
             tags: file.data.frontmatter?.tags ?? [],
             content: file.data.text ?? "",
