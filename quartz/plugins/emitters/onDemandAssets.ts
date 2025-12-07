@@ -8,6 +8,18 @@ import { QuartzConfig } from "../../cfg"
 import { ProcessedContent } from "../vfile"
 import { getAllFolderNotes } from "../filters/folderNotes"
 
+/**
+ * Slugify a path segment (matching the logic in path.ts sluggify)
+ */
+function sluggifySegment(s: string): string {
+  return s
+    .replace(/\s/g, "-")
+    .replace(/&/g, "-and-")
+    .replace(/%/g, "-percent")
+    .replace(/\?/g, "")
+    .replace(/#/g, "")
+}
+
 interface Options {
   /**
    * Whether to include assets that couldn't be resolved to actual files
@@ -59,14 +71,32 @@ async function getAllAssets(argv: Argv, cfg: QuartzConfig): Promise<Map<string, 
   // Glob all non-MD files
   const files = await glob("**", argv.directory, ["**/*.md", ...cfg.configuration.ignorePatterns])
 
-  // Create a map of basename -> full path for quick lookup
+  // Create a map of various path forms -> full path for lookup
   const assetMap = new Map<string, FilePath>()
   for (const fp of files) {
+    // Index by original path
     assetMap.set(fp, fp)
-    // Also index by basename for shortest path resolution
+
+    // Index by basename (original form)
     const basename = path.basename(fp)
     if (!assetMap.has(basename)) {
       assetMap.set(basename, fp)
+    }
+
+    // Index by slugified basename (for matching HTML src attributes)
+    // HTML src is slugified in ofm.ts, so we need to map slugified -> original
+    const slugifiedBasename = sluggifySegment(basename)
+    if (slugifiedBasename !== basename && !assetMap.has(slugifiedBasename)) {
+      assetMap.set(slugifiedBasename, fp)
+    }
+
+    // Index by slugified full path
+    const slugifiedPath = fp
+      .split("/")
+      .map((seg) => sluggifySegment(seg))
+      .join("/")
+    if (slugifiedPath !== fp && !assetMap.has(slugifiedPath)) {
+      assetMap.set(slugifiedPath, fp)
     }
   }
 
