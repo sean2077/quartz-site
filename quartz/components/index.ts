@@ -11,6 +11,7 @@ import PageTitle from "./PageTitle"
 import ContentMeta from "./ContentMeta"
 import Spacer from "./Spacer"
 import TableOfContents from "./TableOfContents"
+import MobileToc from "./MobileToc"
 import Explorer from "./Explorer"
 import TagList from "./TagList"
 import Graph from "./Graph"
@@ -38,6 +39,7 @@ export {
   ContentMeta,
   Spacer,
   TableOfContents,
+  MobileToc,
   Explorer,
   TagList,
   Graph,

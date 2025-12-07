@@ -1,0 +1,245 @@
+@use "../../styles/variables.scss" as *;
+
+// Hide on desktop
+.mobile-toc-toggle,
+.mobile-toc-panel,
+.mobile-toc-backdrop,
+.mobile-back-to-top {
+  display: none;
+}
+
+@media all and ($mobile) {
+  // Shared floating button styles
+  .mobile-fab {
+    position: fixed;
+    right: 1rem;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    cursor: pointer;
+    z-index: 89;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      transition: transform 0.2s ease;
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  // Back to top button
+  .mobile-back-to-top {
+    @extend .mobile-fab;
+    bottom: calc(1rem + 42px + 0.5rem);
+    background-color: var(--light);
+    border: 1px solid var(--lightgray);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.08),
+      0 1px 2px rgba(0, 0, 0, 0.04);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px) scale(0.9);
+
+    &.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+
+    &:active {
+      transform: scale(0.95);
+      background-color: var(--lightgray);
+    }
+
+    svg {
+      stroke: var(--darkgray);
+      stroke-width: 2.5;
+    }
+  }
+
+  // TOC toggle button
+  .mobile-toc-toggle {
+    @extend .mobile-fab;
+    bottom: 1rem;
+    background-color: var(--dark);
+    border: none;
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.15),
+      0 2px 4px rgba(0, 0, 0, 0.1);
+
+    &:active {
+      transform: scale(0.95);
+      background-color: var(--darkgray);
+    }
+
+    svg {
+      stroke: var(--light);
+      stroke-width: 2;
+    }
+  }
+
+  // TOC panel (bottom sheet)
+  .mobile-toc-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 70vh;
+    background-color: var(--light);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+    z-index: 95;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    &.active {
+      transform: translateY(0);
+    }
+
+    // Handle bar indicator
+    &::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 36px;
+      height: 4px;
+      background-color: var(--lightgray);
+      border-radius: 2px;
+    }
+  }
+
+  .mobile-toc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1rem 0.75rem;
+    flex-shrink: 0;
+
+    h3 {
+      margin: 0;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--darkgray);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .mobile-toc-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.5rem;
+      color: var(--gray);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+
+      &:active {
+        background-color: var(--lightgray);
+      }
+
+      svg {
+        width: 18px;
+        height: 18px;
+        stroke-width: 2.5;
+      }
+    }
+  }
+
+  .mobile-toc-content {
+    padding: 0.5rem 0.75rem 2rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+    overscroll-behavior: contain;
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      margin-bottom: 2px;
+
+      a {
+        display: block;
+        padding: 0.625rem 0.75rem;
+        color: var(--darkgray);
+        border-radius: 8px;
+        transition: all 0.15s ease;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        text-decoration: none;
+        font-weight: 500;
+        -webkit-tap-highlight-color: transparent;
+
+        &:active {
+          background-color: var(--lightgray);
+          color: var(--dark);
+        }
+      }
+    }
+
+    // Depth indentation with visual hierarchy
+    @for $i from 0 through 6 {
+      .depth-#{$i} {
+        padding-left: calc(0.75rem * #{$i});
+
+        a {
+          @if $i == 0 {
+            font-weight: 600;
+            color: var(--dark);
+          } @else {
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: var(--gray);
+
+            &:active {
+              color: var(--darkgray);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Backdrop
+  .mobile-toc-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 92;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: block;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+
+    &.active {
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+}
