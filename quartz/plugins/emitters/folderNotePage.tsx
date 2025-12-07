@@ -19,7 +19,7 @@ import {
   sharedPageComponents,
   defaultContentPageLayout,
 } from "../../../quartz.layout"
-import { FolderContent, Content } from "../../components"
+import { FolderContent, Content, Graph, DesktopOnly, TableOfContents, Backlinks } from "../../components"
 import { byNaturalOrderFolderFirst } from "../../components/PageList"
 import { write } from "./helpers"
 import { i18n, TRANSLATIONS } from "../../i18n"
@@ -203,6 +203,7 @@ export const FolderNotePage: QuartzEmitterPlugin<Partial<FolderNotePageOptions>>
     ...sharedPageComponents,
     ...defaultListPageLayout,
     pageBody: FolderContent({ sort: userOpts?.sort ?? byNaturalOrderFolderFirst() }),
+    right: [Graph(), DesktopOnly(TableOfContents()), Backlinks()],
     ...userOpts,
   }
 
