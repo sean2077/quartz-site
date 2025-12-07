@@ -1,0 +1,288 @@
+// ==========================================
+// 动态背景组件样式
+// ==========================================
+
+@use "../../styles/variables.scss" as *;
+
+// ==========================================
+// 变量定义
+// ==========================================
+
+$glass-blur: 16px;
+
+// --- 亮色主题背景变量 ---
+// 使用较深的米色调，降低亮度
+$light-mask-bg: rgba(180, 175, 165, 0.35);        // 遮罩 - 更深
+$light-center-bg: rgba(245, 242, 235, 0.75);      // 内容区 - 略微不透明
+$light-sidebar-bg: rgba(245, 242, 235, 0.6);      // 侧边栏
+$light-code-bg: rgba(235, 230, 220, 0.8);         // 代码块
+$light-inline-code-bg: rgba(230, 225, 215, 0.75); // 行内代码
+
+// --- 暗色主题背景变量 ---
+$dark-mask-bg: rgba(20, 20, 25, 0.35);
+$dark-center-bg: rgba(35, 35, 40, 0.7);
+$dark-sidebar-bg: rgba(35, 35, 40, 0.55);
+$dark-code-bg: rgba(30, 30, 38, 0.75);
+$dark-inline-code-bg: rgba(45, 45, 52, 0.7);
+
+// --- 差异化变量 (无法直接复用 var(--light)) ---
+// 边框: 始终保持白色，但透明度不同
+$light-border: rgba(255, 255, 255, 0.6);
+$dark-border: rgba(255, 255, 255, 0.08);
+
+// 阴影: 始终为黑色，但透明度不同
+$light-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+$dark-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+
+// SVG 背景 (暗色模式专用)
+$dark-svg-bg: rgba(255, 255, 255, 0.85);
+
+// Heading 颜色 - 使用不同颜色区分各级标题
+$heading-colors: (
+  1: var(--secondary),  // h1 - 主色
+  2: var(--tertiary),   // h2 - 第二色
+  3: #059669,           // h3 - 绿色 (亮色模式)
+  4: #d97706,           // h4 - 橙色 (亮色模式)
+  5: var(--gray),       // h5
+  6: var(--gray)        // h6
+);
+
+// 暗色模式 heading 颜色
+$heading-colors-dark: (
+  3: #34d399,           // h3 - 绿色 (暗色模式)
+  4: #fbbf24,           // h4 - 橙色 (暗色模式)
+);
+
+// TOC 颜色 - depth 是相对值: 第一个 heading 为 depth-0
+// 例如: 如果文章从 h2 开始, h2=depth-0, h3=depth-1, h4=depth-2
+// 亮色模式使用更深的颜色以提高对比度
+$toc-colors: (
+  0: #6d28d9,           // 第一级 (通常是 h2) - 深紫色
+  1: #047857,           // 第二级 (通常是 h3) - 深绿色
+  2: #b45309,           // 第三级 (通常是 h4) - 深橙色
+);
+
+$toc-colors-dark: (
+  0: #a78bfa,           // 第一级 - 浅紫色
+  1: #34d399,           // 第二级 - 浅绿色
+  2: #fbbf24,           // 第三级 - 浅橙色
+);
+
+// ==========================================
+// 混合宏
+// ==========================================
+
+@mixin glass-effect($bg, $border: transparent, $shadow: none) {
+  background: $bg;
+  backdrop-filter: blur($glass-blur);
+  -webkit-backdrop-filter: blur($glass-blur);
+  @if $border != transparent {
+    border: 1px solid $border;
+  }
+  @if $shadow != none {
+    box-shadow: $shadow;
+  }
+}
+
+// ==========================================
+// 动态背景
+// ==========================================
+
+.dynamic-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 1.5s ease-in-out;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: $light-mask-bg;
+    transition: background 0.3s ease;
+  }
+}
+
+// 时段背景图片
+$time-phases: ("dawn", "morning", "noon", "afternoon", "dusk", "night");
+$time-extensions: ("png", "png", "jpg", "png", "jpg", "jpg");
+
+@for $i from 1 through length($time-phases) {
+  $phase: nth($time-phases, $i);
+  $ext: nth($time-extensions, $i);
+  :root[data-time-phase="#{$phase}"] .dynamic-background {
+    background-image: url("/static/A day in the corner of the city/#{$phase}.#{$ext}");
+  }
+}
+
+// ==========================================
+// 布局
+// ==========================================
+
+.page > #quartz-body {
+  > .sidebar {
+    padding-top: 2rem !important;
+  }
+  > .page-header {
+    margin-top: 2rem !important;
+  }
+}
+
+.center {
+  padding: 0.5rem 1rem 0;
+}
+
+@media (min-width: 1200px) {
+  .page {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .page > #quartz-body {
+    grid-template-columns: 280px 1fr 280px !important;
+    column-gap: 0.5rem !important;
+
+    > .center {
+      box-sizing: border-box !important;
+      width: 100% !important;
+      padding: 0.5rem 1.5rem 0;
+    }
+  }
+}
+
+@media (min-width: 1800px) {
+  .page {
+    max-width: 1800px !important;
+    margin: 0 auto !important;
+  }
+}
+
+// ==========================================
+// 亮色主题样式
+// ==========================================
+
+.center {
+  @include glass-effect($light-center-bg, $light-border, $light-shadow);
+  border-radius: 8px;
+}
+
+.sidebar {
+  @include glass-effect($light-sidebar-bg);
+}
+
+pre {
+  background: $light-code-bg !important;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+code:not(pre code) {
+  background: $light-inline-code-bg !important;
+}
+
+.graph > .graph-outer {
+  background: $light-center-bg;
+  backdrop-filter: blur(5px);
+}
+
+// Heading 颜色
+@each $level, $color in $heading-colors {
+  article h#{$level} {
+    color: $color;
+  }
+}
+
+// TOC 颜色
+@each $depth, $color in $toc-colors {
+  .toc .depth-#{$depth} > a {
+    color: $color !important;
+  }
+}
+
+// ==========================================
+// 暗色主题样式
+// ==========================================
+
+:root[saved-theme="dark"] {
+  .dynamic-background::after {
+    background: $dark-mask-bg;
+  }
+
+  .center {
+    @include glass-effect($dark-center-bg, $dark-border, $dark-shadow);
+  }
+
+  .sidebar {
+    @include glass-effect($dark-sidebar-bg);
+  }
+
+  pre {
+    background: $dark-code-bg !important;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  code:not(pre code) {
+    background: $dark-inline-code-bg !important;
+  }
+
+  .graph > .graph-outer {
+    background: $dark-center-bg;
+  }
+
+  article img[src$=".svg"] {
+    background: $dark-svg-bg;
+    border-radius: 4px;
+    padding: 8px;
+  }
+
+  // Heading 颜色 - 暗色模式 (h3/h4 需要覆盖)
+  @each $level, $color in $heading-colors-dark {
+    article h#{$level} {
+      color: $color;
+    }
+  }
+
+  // TOC 颜色 - 暗色模式 (覆盖所有层级)
+  @each $depth, $color in $toc-colors-dark {
+    .toc .depth-#{$depth} > a {
+      color: $color !important;
+    }
+  }
+}
+
+// ==========================================
+// 移动端优化
+// ==========================================
+
+@media (max-width: 800px) {
+  .page > #quartz-body {
+    > .sidebar.left {
+      background-color: transparent !important;
+      padding: 0.8rem 1rem !important;
+      position: sticky !important;
+      top: 0;
+      z-index: 100;
+      @include glass-effect($light-sidebar-bg, $light-border, $light-shadow);
+      border-bottom: 1px solid $light-border;
+      border-radius: 0 0 16px 16px;
+      margin-bottom: 1.5rem;
+      gap: 1rem !important;
+    }
+
+    > .center {
+      padding-top: 0 !important;
+    }
+
+    > .page-header {
+      margin-top: 0.5rem !important;
+    }
+  }
+
+  :root[saved-theme="dark"] .page > #quartz-body > .sidebar.left {
+    @include glass-effect($dark-sidebar-bg, $dark-border, $dark-shadow);
+    border-bottom: 1px solid $dark-border;
+  }
+}
