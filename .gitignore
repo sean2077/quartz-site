@@ -16,3 +16,5 @@ content/
 # AI tools
 .claude/
 .serena/
+CLAUDE.md
+AGENTS.md
