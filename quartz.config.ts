@@ -101,6 +101,8 @@ const config: QuartzConfig = {
       // Custom plugins for on-demand assets and folder notes
       Plugin.CollectAssets(),
       Plugin.MarkFolderNotes(),
+      // Obsidian Bases support (database views)
+      Plugin.ObsidianBases(),
       // Note: StoreFolderNotes is no longer needed - FolderNotes filter now stores folder notes
     ],
     filters: [Plugin.RemoveDrafts(), Plugin.ExplicitPublish(), Plugin.FolderNotes()],

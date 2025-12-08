@@ -19,7 +19,14 @@ import {
   sharedPageComponents,
   defaultContentPageLayout,
 } from "../../../quartz.layout"
-import { FolderContent, Content, Graph, DesktopOnly, TableOfContents, Backlinks } from "../../components"
+import {
+  FolderContent,
+  Content,
+  Graph,
+  DesktopOnly,
+  TableOfContents,
+  Backlinks,
+} from "../../components"
 import { byNaturalOrderFolderFirst } from "../../components/PageList"
 import { write } from "./helpers"
 import { i18n, TRANSLATIONS } from "../../i18n"

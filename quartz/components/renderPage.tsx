@@ -10,6 +10,7 @@ import { Root, Element, ElementContent } from "hast"
 import { GlobalConfiguration } from "../cfg"
 import { i18n } from "../i18n"
 import { styleText } from "util"
+import { renderBasePlaceholders } from "../util/bases"
 
 interface RenderComponents {
   head: QuartzComponent
@@ -224,6 +225,9 @@ export function renderPage(
   const root = clone(componentData.tree) as Root
   const visited = new Set<FullSlug>([slug])
   renderTranscludes(root, cfg, slug, componentData, visited)
+
+  // Render Obsidian Bases placeholders
+  renderBasePlaceholders(root, componentData.fileData, componentData.allFiles)
 
   // set componentData.tree to the edited html that has transclusions rendered
   componentData.tree = root
