@@ -9,6 +9,11 @@ async function* processFile(ctx: BuildCtx, file: VFile) {
   const ogSlug = simplifySlug(file.data.slug!)
 
   for (const aliasTarget of file.data.aliases ?? []) {
+    // Skip aliases containing "/" to avoid creating unexpected directory structures
+    if (aliasTarget.includes("/")) {
+      continue
+    }
+
     const aliasTargetSlug = (
       isRelativeURL(aliasTarget)
         ? path.normalize(path.join(ogSlug, "..", aliasTarget))
