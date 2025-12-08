@@ -226,7 +226,7 @@ a {
       gap: 1.2rem;
       top: 0;
       box-sizing: border-box;
-      padding: $topSpacing 2rem 2rem 2rem;
+      padding: $topSpacing 1rem 2rem 1rem; // 减少左右 padding，从 2rem 改为 1rem
       display: flex;
       height: 100vh;
       position: sticky;
