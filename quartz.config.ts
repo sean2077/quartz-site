@@ -87,6 +87,7 @@ const config: QuartzConfig = {
         },
         keepBackground: false,
       }),
+      Plugin.LeetCodeLinks(), // Convert LeetCode wiki-links to external links (must be before OFM)
       Plugin.ObsidianFlavoredMarkdown({ enableInHtmlEmbed: false }),
       Plugin.GitHubFlavoredMarkdown(),
       Plugin.TableOfContents(),
