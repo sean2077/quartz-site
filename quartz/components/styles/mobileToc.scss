@@ -21,8 +21,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      visibility 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-tap-highlight-color: transparent;
+    // iOS Safari fix: force GPU layer
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    // Prevent iOS touch delay
+    touch-action: manipulation;
 
     svg {
       width: 20px;
@@ -31,14 +39,15 @@
     }
 
     &:active {
-      transform: scale(0.95);
+      transform: translateZ(0) scale(0.95);
     }
   }
 
   // Back to top button
   .mobile-back-to-top {
     @extend .mobile-fab;
-    bottom: calc(1rem + 42px + 0.5rem);
+    // Use env() for safe area on notched iPhones
+    bottom: calc(1rem + 42px + 0.5rem + env(safe-area-inset-bottom, 0px));
     background-color: var(--light);
     border: 1px solid var(--lightgray);
     box-shadow:
@@ -46,16 +55,14 @@
       0 1px 2px rgba(0, 0, 0, 0.04);
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px) scale(0.9);
 
     &.visible {
       opacity: 1;
       visibility: visible;
-      transform: translateY(0) scale(1);
     }
 
     &:active {
-      transform: scale(0.95);
+      transform: translateZ(0) scale(0.95);
       background-color: var(--lightgray);
     }
 
@@ -68,7 +75,8 @@
   // TOC toggle button
   .mobile-toc-toggle {
     @extend .mobile-fab;
-    bottom: 1rem;
+    // Use env() for safe area on notched iPhones
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
     background-color: var(--dark);
     border: none;
     box-shadow:
@@ -76,7 +84,7 @@
       0 2px 4px rgba(0, 0, 0, 0.1);
 
     &:active {
-      transform: scale(0.95);
+      transform: translateZ(0) scale(0.95);
       background-color: var(--darkgray);
     }
 
@@ -226,16 +234,23 @@
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
+    width: 100%;
+    height: 100%;
+    // iOS Safari fix: use dvh units
+    height: 100dvh;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 92;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: block;
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
+    // iOS Safari fix: force GPU layer
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
 
     &.active {
       opacity: 1;

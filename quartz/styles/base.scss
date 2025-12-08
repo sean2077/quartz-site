@@ -7,8 +7,11 @@
 html {
   scroll-behavior: smooth;
   text-size-adjust: none;
+  -webkit-text-size-adjust: none;
   overflow-x: hidden;
   width: 100vw;
+  // iOS Safari: ensure proper height calculation
+  height: 100%;
 }
 
 body {
@@ -17,6 +20,11 @@ body {
   background-color: var(--light);
   font-family: var(--bodyFont);
   color: var(--darkgray);
+  // iOS Safari: minimum height for proper fixed positioning
+  min-height: 100%;
+  min-height: 100dvh;
+  // iOS Safari: prevent overscroll bounce from breaking fixed elements
+  -webkit-overflow-scrolling: touch;
 }
 
 .text-highlight {

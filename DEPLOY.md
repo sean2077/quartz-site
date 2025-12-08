@@ -120,6 +120,42 @@ configuration: {
 
 - `NODE_VERSION`: `22`
 
+## 常见问题
+
+### Wrangler 端口被占用 / 页面无法加载
+
+如果遇到 `localhost:8788` 无法访问，可能是之前的 wrangler 进程没有正确关闭，导致端口被僵尸进程占用。
+
+**诊断：**
+
+```bash
+# 查看占用 8788 端口的进程
+netstat -ano | grep 8788
+```
+
+如果看到多个 `LISTENING` 状态的进程，或大量 `CLOSE_WAIT`/`FIN_WAIT` 连接，说明有僵尸进程。
+
+**解决方法：**
+
+```bash
+# 方法 1：杀掉占用端口的进程（Windows）
+# 先找出 PID
+netstat -ano | grep "8788.*LISTENING"
+# 然后杀掉（替换 <PID> 为实际进程号）
+taskkill //F //PID <PID>
+
+# 方法 2：一行命令解决
+netstat -ano | grep "8788.*LISTENING" | awk '{print $5}' | xargs -I {} taskkill //F //PID {}
+
+# 方法 3：换一个端口
+npx wrangler pages dev public --port 9000
+```
+
+**预防：**
+
+- 使用 `Ctrl+C` 正常关闭 wrangler，不要直接关闭终端
+- 如果使用 Claude Code 等工具，避免在后台运行 wrangler 进程
+
 ## 后续：CI 自动部署
 
 当工作流稳定后，可以考虑设置 GitHub Actions 自动部署：

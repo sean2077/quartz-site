@@ -90,17 +90,29 @@ $toc-colors-dark: (
 
 .dynamic-background {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  // iOS Safari fix: use 100dvh for dynamic viewport height
+  height: 100dvh;
   z-index: -1;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  background-attachment: scroll; // iOS doesn't support fixed background
   transition: background-image 1.5s ease-in-out;
+  // Prevent iOS overscroll issues
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 
   &::after {
     content: "";
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: $light-mask-bg;
     transition: background 0.3s ease;
   }
@@ -184,8 +196,7 @@ code:not(pre code) {
 }
 
 .graph > .graph-outer {
-  background: $light-center-bg;
-  backdrop-filter: blur(5px);
+  @include glass-effect($light-sidebar-bg, $light-border, $light-shadow);
 }
 
 // Heading 颜色
@@ -229,7 +240,7 @@ code:not(pre code) {
   }
 
   .graph > .graph-outer {
-    background: $dark-center-bg;
+    @include glass-effect($dark-sidebar-bg, $dark-border, $dark-shadow);
   }
 
   article img[src$=".svg"] {
