@@ -7,6 +7,7 @@ import { ProcessedContent, QuartzPluginData, defaultProcessedContent } from "../
 import { FullPageLayout } from "../../cfg"
 import path from "path"
 import {
+  FilePath,
   FullSlug,
   SimpleSlug,
   stripSlashes,
@@ -61,9 +62,11 @@ async function* processFolderInfo(
     const externalResources = pageResources(pathToRoot(indexSlug), resources)
 
     // Create a folder page data entry with the correct slug (folder/index)
+    // Ensure filePath is set for trie building (trieFromAllFiles requires it)
     const folderPageData: QuartzPluginData = {
       ...file.data,
       slug: indexSlug,
+      filePath: file.data.filePath ?? (`${folder}/index.md` as FilePath),
     }
 
     // Check if this folder has child files in allFiles
@@ -275,9 +278,12 @@ export const FolderNotePage: QuartzEmitterPlugin<Partial<FolderNotePageOptions>>
           // Add folder note data to be included in allFiles for trie building
           // Use the folder/index slug so it appears as a child of the parent folder
           const indexSlug = joinSegments(folderPath, "index") as FullSlug
+          // Ensure filePath is set for trie building (trieFromAllFiles requires it)
+          const filePath = vfile.data.filePath ?? (`${folderPath}/index.md` as FilePath)
           folderNoteFiles.push({
             ...vfile.data,
             slug: indexSlug,
+            filePath,
           })
         }
       }
@@ -306,9 +312,12 @@ export const FolderNotePage: QuartzEmitterPlugin<Partial<FolderNotePageOptions>>
         const simpleSlug = folderPath as SimpleSlug
         if (simpleSlug !== "." && !simpleSlug.startsWith("tags")) {
           const indexSlug = joinSegments(folderPath, "index") as FullSlug
+          // Ensure filePath is set for trie building (trieFromAllFiles requires it)
+          const filePath = vfile.data.filePath ?? (`${folderPath}/index.md` as FilePath)
           folderNoteFiles.push({
             ...vfile.data,
             slug: indexSlug,
+            filePath,
           })
         }
       }
