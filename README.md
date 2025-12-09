@@ -1,3 +1,17 @@
+> [!NOTE]
+> 本项目是 [Quartz](https://github.com/jackyzha0/quartz) 的一个魔改 Fork 版本。
+>
+> 考虑到 Upstream 迭代速度以及对特定特性的支持情况，本项目将长期独立维护并按需迭代。我会持续关注 Upstream 的更新并合并有价值的改动。
+>
+> 目前本 Fork 新增的主要特性包括：
+> - **Folder Note**: 支持文件夹笔记
+> - **按需打包附件**: 优化构建体积
+> - **动态背景**: 增强视觉体验
+> - **移动端优化**: 更好的移动端阅读体验
+> - **Base 支持**: 支持非根目录部署
+>
+> 👀 **在线示例**: [sean2077.pages.dev](https://sean2077.pages.dev)
+
 # Quartz v4
 
 > “[One] who works with the door open gets all kinds of interruptions, but [they] also occasionally gets clues as to what the world is and what might be important.” — Richard Hamming

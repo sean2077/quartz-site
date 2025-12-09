@@ -8,7 +8,7 @@ export const sharedPageComponents: SharedLayout = {
   afterBody: [Component.DynamicBackground(), Component.MobileToc()],
   footer: Component.Footer({
     links: {
-      GitHub: "https://github.com/sean2077",
+      GitHub: "https://github.com/sean2077/quartz-site",
     },
   }),
 }
