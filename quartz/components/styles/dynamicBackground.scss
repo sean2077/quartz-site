@@ -8,17 +8,20 @@
 // 变量定义
 // ==========================================
 
-$glass-blur: 16px;
+$glass-blur: 12px;
 
 // --- 背景遮罩 (来自 Obsidian 配置) ---
-$light-mask-bg: rgba(200, 200, 200, 0.31);
+// 亮色模式：更透明，让背景图更明显
+$light-mask-bg: rgba(245, 240, 230, 0.25);
 $dark-mask-bg: rgba(31, 30, 30, 0.38);
 
 // --- 毛玻璃透明度 ---
-// 使用 color-mix 基于 CSS 变量 --light 创建透明色
-// 亮色: 75% 不透明, 暗色: 70% 不透明
-$glass-opacity-center: 75%;
-$glass-opacity-sidebar: 60%;
+// 亮色模式降低不透明度，让更多背景透出
+$glass-opacity-center-light: 65%;
+$glass-opacity-sidebar-light: 50%;
+// 暗色模式保持原样
+$glass-opacity-center-dark: 70%;
+$glass-opacity-sidebar-dark: 55%;
 $glass-opacity-code: 95%;
 $glass-opacity-inline-code: 90%;
 
@@ -178,7 +181,8 @@ $time-extensions: ("png", "png", "jpg", "png", "jpg", "jpg");
 // ==========================================
 
 .center {
-  background: color-mix(in srgb, var(--light) #{$glass-opacity-center}, transparent);
+  // 简洁的毛玻璃背景，温暖色调
+  background: color-mix(in srgb, var(--light) #{$glass-opacity-center-light}, transparent);
   backdrop-filter: blur($glass-blur);
   -webkit-backdrop-filter: blur($glass-blur);
   border: 1px solid $light-border;
@@ -187,7 +191,7 @@ $time-extensions: ("png", "png", "jpg", "png", "jpg", "jpg");
 }
 
 .sidebar {
-  background: color-mix(in srgb, var(--light) #{$glass-opacity-sidebar}, transparent);
+  background: color-mix(in srgb, var(--light) #{$glass-opacity-sidebar-light}, transparent);
   backdrop-filter: blur($glass-blur);
   -webkit-backdrop-filter: blur($glass-blur);
 }
@@ -210,7 +214,7 @@ code:not(pre code) {
 }
 
 .graph > .graph-outer {
-  background: color-mix(in srgb, var(--light) #{$glass-opacity-sidebar}, transparent);
+  background: color-mix(in srgb, var(--light) #{$glass-opacity-sidebar-light}, transparent);
   backdrop-filter: blur($glass-blur);
   -webkit-backdrop-filter: blur($glass-blur);
   border: 1px solid $light-border;
@@ -241,13 +245,15 @@ code:not(pre code) {
   }
 
   .center {
-    background: color-mix(in srgb, var(--light) 70%, transparent);
+    // 暗色模式：移除纸质纹理，使用纯毛玻璃
+    background: color-mix(in srgb, var(--light) #{$glass-opacity-center-dark}, transparent);
+    background-blend-mode: normal;
     border: 1px solid $dark-border;
     box-shadow: $dark-shadow;
   }
 
   .sidebar {
-    background: color-mix(in srgb, var(--light) 55%, transparent);
+    background: color-mix(in srgb, var(--light) #{$glass-opacity-sidebar-dark}, transparent);
   }
 
   pre {

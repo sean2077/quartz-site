@@ -50,24 +50,24 @@ const config: QuartzConfig = {
       },
       colors: {
         lightMode: {
-          light: "#f5f2eb", // 内容区背景基色 (米色调)
-          lightgray: "#e5e5e5", // 边框、分隔线
-          gray: "#b8b8b8", // 次要文字
-          darkgray: "#4e4e4e", // 正文文字
-          dark: "#2b2b2b", // 标题文字
-          secondary: "#284b63", // 链接、h1/h2 颜色 (深蓝)
-          tertiary: "#84a59d", // 链接悬停色 (青绿)
-          highlight: "rgba(143, 159, 169, 0.15)", // 高亮背景
+          light: "#faf6ef", // 内容区背景基色 (温暖的纸张色)
+          lightgray: "#e8e4dc", // 边框、分隔线 (暖灰)
+          gray: "#8a857c", // 次要文字 (加深)
+          darkgray: "#3a3632", // 正文文字 (加深，提高对比度)
+          dark: "#1a1816", // 标题文字 (更深)
+          secondary: "#2d5a6b", // 链接、h1/h2 颜色 (加深)
+          tertiary: "#4d8577", // 链接悬停色 (加深)
+          highlight: "rgba(143, 159, 169, 0.12)", // 高亮背景
           textHighlight: "#fff23688", // 文字高亮 (黄色)
         },
         darkMode: {
           light: "#232328", // 内容区背景基色 (深灰)
           lightgray: "#393639", // 边框、分隔线
-          gray: "#646464", // 次要文字
-          darkgray: "#d4d4d4", // 正文文字
-          dark: "#ebebec", // 标题文字
-          secondary: "#7b97aa", // 链接、h1/h2 颜色 (浅蓝)
-          tertiary: "#84a59d", // 链接悬停色 (青绿)
+          gray: "#7a7a7a", // 次要文字 (加亮)
+          darkgray: "#e8e8e8", // 正文文字 (加亮，提高对比度)
+          dark: "#f5f5f5", // 标题文字 (更亮)
+          secondary: "#8eadc2", // 链接、h1/h2 颜色 (加亮)
+          tertiary: "#9cc4b5", // 链接悬停色 (加亮)
           highlight: "rgba(143, 159, 169, 0.15)", // 高亮背景
           textHighlight: "#b3aa0288", // 文字高亮 (橙黄)
         },
