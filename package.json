@@ -17,7 +17,9 @@
     "check": "tsc --noEmit && npx prettier . --check",
     "format": "npx prettier . --write",
     "test": "tsx --test",
-    "profile": "0x -D prof ./quartz/bootstrap-cli.mjs build --concurrency=1"
+    "profile": "0x -D prof ./quartz/bootstrap-cli.mjs build --concurrency=1",
+    "build": "npx quartz build -d obsidian-vault --concurrency 8",
+    "dev": "npx wrangler pages dev public"
   },
   "engines": {
     "npm": ">=10.9.2",
