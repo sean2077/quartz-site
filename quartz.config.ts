@@ -44,32 +44,32 @@ const config: QuartzConfig = {
       fontOrigin: "googleFonts",
       cdnCaching: true,
       typography: {
-        header: "Schibsted Grotesk",
-        body: "Source Sans Pro",
-        code: "IBM Plex Mono",
+        header: { name: "LXGW WenKai", weights: [400, 700] },
+        body: { name: "LXGW WenKai", weights: [300, 400, 700], includeItalic: false },
+        code: "Fira Code",
       },
       colors: {
         lightMode: {
-          light: "#faf8f8",
-          lightgray: "#e5e5e5",
-          gray: "#b8b8b8",
-          darkgray: "#4e4e4e",
-          dark: "#2b2b2b",
-          secondary: "#284b63",
-          tertiary: "#84a59d",
-          highlight: "rgba(143, 159, 169, 0.15)",
-          textHighlight: "#fff23688",
+          light: "#f5f2eb", // 内容区背景基色 (米色调)
+          lightgray: "#e5e5e5", // 边框、分隔线
+          gray: "#b8b8b8", // 次要文字
+          darkgray: "#4e4e4e", // 正文文字
+          dark: "#2b2b2b", // 标题文字
+          secondary: "#284b63", // 链接、h1/h2 颜色 (深蓝)
+          tertiary: "#84a59d", // 链接悬停色 (青绿)
+          highlight: "rgba(143, 159, 169, 0.15)", // 高亮背景
+          textHighlight: "#fff23688", // 文字高亮 (黄色)
         },
         darkMode: {
-          light: "#161618",
-          lightgray: "#393639",
-          gray: "#646464",
-          darkgray: "#d4d4d4",
-          dark: "#ebebec",
-          secondary: "#7b97aa",
-          tertiary: "#84a59d",
-          highlight: "rgba(143, 159, 169, 0.15)",
-          textHighlight: "#b3aa0288",
+          light: "#232328", // 内容区背景基色 (深灰)
+          lightgray: "#393639", // 边框、分隔线
+          gray: "#646464", // 次要文字
+          darkgray: "#d4d4d4", // 正文文字
+          dark: "#ebebec", // 标题文字
+          secondary: "#7b97aa", // 链接、h1/h2 颜色 (浅蓝)
+          tertiary: "#84a59d", // 链接悬停色 (青绿)
+          highlight: "rgba(143, 159, 169, 0.15)", // 高亮背景
+          textHighlight: "#b3aa0288", // 文字高亮 (橙黄)
         },
       },
     },
@@ -121,8 +121,8 @@ const config: QuartzConfig = {
       Plugin.Static(),
       Plugin.Favicon(),
       Plugin.NotFoundPage(),
-      // Comment out CustomOgImages to speed up build time
-      Plugin.CustomOgImages(),
+      // CustomOgImages 暂时禁用：LXGW WenKai 字体不被 satori 支持
+      // Plugin.CustomOgImages(),
     ],
   },
 }

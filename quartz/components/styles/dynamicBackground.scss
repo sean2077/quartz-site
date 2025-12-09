@@ -10,89 +10,80 @@
 
 $glass-blur: 16px;
 
-// --- 亮色主题背景变量 ---
-// 使用较深的米色调，降低亮度
-$light-mask-bg: rgba(180, 175, 165, 0.35); // 遮罩 - 更深
-$light-center-bg: rgba(245, 242, 235, 0.75); // 内容区 - 略微不透明
-$light-sidebar-bg: rgba(245, 242, 235, 0.6); // 侧边栏
-$light-code-bg: rgba(235, 230, 220, 0.8); // 代码块
-$light-inline-code-bg: rgba(230, 225, 215, 0.75); // 行内代码
+// --- 背景遮罩 (来自 Obsidian 配置) ---
+$light-mask-bg: rgba(200, 200, 200, 0.31);
+$dark-mask-bg: rgba(31, 30, 30, 0.38);
 
-// --- 暗色主题背景变量 ---
-$dark-mask-bg: rgba(20, 20, 25, 0.35);
-$dark-center-bg: rgba(35, 35, 40, 0.7);
-$dark-sidebar-bg: rgba(35, 35, 40, 0.55);
-$dark-code-bg: rgba(30, 30, 38, 0.75);
-$dark-inline-code-bg: rgba(45, 45, 52, 0.7);
+// --- 毛玻璃透明度 ---
+// 使用 color-mix 基于 CSS 变量 --light 创建透明色
+// 亮色: 75% 不透明, 暗色: 70% 不透明
+$glass-opacity-center: 75%;
+$glass-opacity-sidebar: 60%;
+$glass-opacity-code: 95%;
+$glass-opacity-inline-code: 90%;
 
-// --- 差异化变量 (无法直接复用 var(--light)) ---
-// 边框: 始终保持白色，但透明度不同
+// --- 边框 ---
 $light-border: rgba(255, 255, 255, 0.6);
 $dark-border: rgba(255, 255, 255, 0.08);
 
-// 阴影: 始终为黑色，但透明度不同
+// --- 阴影 ---
 $light-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
 $dark-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 
-// SVG 背景 (暗色模式专用)
+// --- SVG 背景 (暗色模式专用) ---
 $dark-svg-bg: rgba(255, 255, 255, 0.85);
 
 // Heading 颜色 - 使用不同颜色区分各级标题
+// 亮色模式颜色
+$color-h2-light: var(--secondary); // h2 - 主色 (深蓝)
+$color-h3-light: #059669; // h3 - 绿色
+$color-h4-light: #d97706; // h4 - 橙色
+
+// 暗色模式颜色
+$color-h2-dark: var(--secondary); // h2 - 主色 (浅蓝)
+$color-h3-dark: #34d399; // h3 - 浅绿色
+$color-h4-dark: #fbbf24; // h4 - 浅橙色
+
 $heading-colors: (
   1: var(--secondary),
   // h1 - 主色
-  2: var(--tertiary),
-  // h2 - 第二色
-  3: #059669,
-  // h3 - 绿色 (亮色模式)
-  4: #d97706,
-  // h4 - 橙色 (亮色模式)
+  2: $color-h2-light,
+  // h2
+  3: $color-h3-light,
+  // h3
+  4: $color-h4-light,
+  // h4
   5: var(--gray),
   // h5
   6: var(--gray), // h6
 );
 
-// 暗色模式 heading 颜色
+// 暗色模式 heading 颜色 (只需覆盖不同的)
 $heading-colors-dark: (
-  3: #34d399,
-  // h3 - 绿色 (暗色模式)
-  4: #fbbf24, // h4 - 橙色 (暗色模式)
+  3: $color-h3-dark,
+  4: $color-h4-dark,
 );
 
-// TOC 颜色 - depth 是相对值: 第一个 heading 为 depth-0
-// 例如: 如果文章从 h2 开始, h2=depth-0, h3=depth-1, h4=depth-2
-// 亮色模式使用更深的颜色以提高对比度
+// TOC 颜色 - 与 heading 颜色对应
+// depth-0 对应 h2, depth-1 对应 h3, depth-2 对应 h4
 $toc-colors: (
-  0: #6d28d9,
-  // 第一级 (通常是 h2) - 深紫色
-  1: #047857,
-  // 第二级 (通常是 h3) - 深绿色
-  2: #b45309, // 第三级 (通常是 h4) - 深橙色
+  0: $color-h2-light,
+  1: $color-h3-light,
+  2: $color-h4-light,
 );
 
 $toc-colors-dark: (
-  0: #a78bfa,
-  // 第一级 - 浅紫色
-  1: #34d399,
-  // 第二级 - 浅绿色
-  2: #fbbf24, // 第三级 - 浅橙色
+  0: $color-h2-dark,
+  1: $color-h3-dark,
+  2: $color-h4-dark,
 );
 
 // ==========================================
 // 混合宏
 // ==========================================
 
-@mixin glass-effect($bg, $border: transparent, $shadow: none) {
-  background: $bg;
-  backdrop-filter: blur($glass-blur);
-  -webkit-backdrop-filter: blur($glass-blur);
-  @if $border != transparent {
-    border: 1px solid $border;
-  }
-  @if $shadow != none {
-    box-shadow: $shadow;
-  }
-}
+// 毛玻璃效果现在直接使用 color-mix() 和 CSS 变量
+// 这样颜色可以统一在 quartz.config.ts 中管理
 
 // ==========================================
 // 动态背景
@@ -165,7 +156,7 @@ $time-extensions: ("png", "png", "jpg", "png", "jpg", "jpg");
 
   .page > #quartz-body {
     grid-template-columns: 280px 1fr 280px !important;
-    column-gap: 0.5rem !important;
+    column-gap: 0.25rem !important;
 
     > .center {
       box-sizing: border-box !important;
@@ -183,30 +174,47 @@ $time-extensions: ("png", "png", "jpg", "png", "jpg", "jpg");
 }
 
 // ==========================================
-// 亮色主题样式
+// 亮色主题样式 (使用 color-mix 复用 --light 变量)
 // ==========================================
 
 .center {
-  @include glass-effect($light-center-bg, $light-border, $light-shadow);
+  background: color-mix(in srgb, var(--light) #{$glass-opacity-center}, transparent);
+  backdrop-filter: blur($glass-blur);
+  -webkit-backdrop-filter: blur($glass-blur);
+  border: 1px solid $light-border;
+  box-shadow: $light-shadow;
   border-radius: 8px;
 }
 
 .sidebar {
-  @include glass-effect($light-sidebar-bg);
+  background: color-mix(in srgb, var(--light) #{$glass-opacity-sidebar}, transparent);
+  backdrop-filter: blur($glass-blur);
+  -webkit-backdrop-filter: blur($glass-blur);
 }
 
+// 代码块 - 使用柔和的边框，与正文风格一致
 pre {
-  background: $light-code-bg !important;
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--lightgray) 30%, transparent) !important;
+  backdrop-filter: blur(3px);
+  // 左侧强调线 + 柔和边框
+  border: none;
+  border-left: 3px solid var(--secondary);
+  border-radius: 0 5px 5px 0;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lightgray) 50%, transparent);
 }
 
+// 行内代码 - 更柔和
 code:not(pre code) {
-  background: $light-inline-code-bg !important;
+  background: color-mix(in srgb, var(--lightgray) 40%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--lightgray) 60%, transparent);
 }
 
 .graph > .graph-outer {
-  @include glass-effect($light-sidebar-bg, $light-border, $light-shadow);
+  background: color-mix(in srgb, var(--light) #{$glass-opacity-sidebar}, transparent);
+  backdrop-filter: blur($glass-blur);
+  -webkit-backdrop-filter: blur($glass-blur);
+  border: 1px solid $light-border;
+  box-shadow: $light-shadow;
 }
 
 // Heading 颜色
@@ -233,24 +241,30 @@ code:not(pre code) {
   }
 
   .center {
-    @include glass-effect($dark-center-bg, $dark-border, $dark-shadow);
+    background: color-mix(in srgb, var(--light) 70%, transparent);
+    border: 1px solid $dark-border;
+    box-shadow: $dark-shadow;
   }
 
   .sidebar {
-    @include glass-effect($dark-sidebar-bg);
+    background: color-mix(in srgb, var(--light) 55%, transparent);
   }
 
   pre {
-    background: $dark-code-bg !important;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: color-mix(in srgb, var(--lightgray) 40%, transparent) !important;
+    border-left-color: var(--secondary);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lightgray) 30%, transparent);
   }
 
   code:not(pre code) {
-    background: $dark-inline-code-bg !important;
+    background: color-mix(in srgb, var(--lightgray) 50%, transparent) !important;
+    border-color: color-mix(in srgb, var(--lightgray) 40%, transparent);
   }
 
   .graph > .graph-outer {
-    @include glass-effect($dark-sidebar-bg, $dark-border, $dark-shadow);
+    background: color-mix(in srgb, var(--light) 55%, transparent);
+    border: 1px solid $dark-border;
+    box-shadow: $dark-shadow;
   }
 
   article img[src$=".svg"] {

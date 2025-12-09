@@ -97,10 +97,11 @@ a {
 
   &.internal {
     text-decoration: none;
-    background-color: var(--highlight);
-    padding: 0 0.1rem;
-    border-radius: 5px;
-    line-height: 1.4rem;
+    // 移除背景色，使链接与正文风格一致
+    // background-color: var(--highlight);
+    // padding: 0 0.1rem;
+    // border-radius: 5px;
+    // line-height: 1.4rem;
 
     &.broken {
       color: var(--secondary);
@@ -525,37 +526,53 @@ p {
 
 .table-container {
   overflow-x: auto;
+  margin: 1rem 0;
 
   & > table {
-    margin: 1rem;
-    padding: 1.5rem;
+    margin: 0;
+    width: 100%;
     border-collapse: collapse;
+    border-radius: 6px;
+    overflow: hidden;
+    // 更明显的外边框
+    border: 1px solid var(--lightgray);
 
     th,
     td {
       min-width: 75px;
+      // 所有单元格都有边框
+      border: 1px solid color-mix(in srgb, var(--lightgray) 80%, transparent);
     }
 
     & > * {
-      line-height: 2rem;
+      line-height: 1.8rem;
     }
   }
 }
 
 th {
   text-align: left;
-  padding: 0.4rem 0.7rem;
-  border-bottom: 2px solid var(--gray);
+  padding: 0.6rem 0.8rem;
+  // 表头背景更明显
+  background: color-mix(in srgb, var(--gray) 25%, transparent);
+  font-weight: 600;
 }
 
 td {
-  padding: 0.2rem 0.7rem;
+  padding: 0.5rem 0.8rem;
 }
 
 tr {
-  border-bottom: 1px solid var(--lightgray);
-  &:last-child {
-    border-bottom: none;
+  transition: background-color 0.15s ease;
+
+  // 隔行变色（zebra striping）- 更明显
+  &:nth-child(even) {
+    background: color-mix(in srgb, var(--lightgray) 40%, transparent);
+  }
+
+  // 悬停效果
+  &:hover {
+    background: color-mix(in srgb, var(--lightgray) 60%, transparent);
   }
 }
 
