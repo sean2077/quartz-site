@@ -11,6 +11,8 @@
 > - **Base 支持**: 支持非根目录部署
 >
 > 👀 **在线示例**: [sean2077.pages.dev](https://sean2077.pages.dev)
+>
+> 🚀 **部署指南**: 详见 [DEPLOY.md](DEPLOY.md)
 
 # Quartz v4
 
