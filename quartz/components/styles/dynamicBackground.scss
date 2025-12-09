@@ -279,15 +279,32 @@ code:not(pre code) {
 // ==========================================
 
 @media (max-width: 800px) {
+  // 移动端禁用动态背景，使用纯色背景
+  .dynamic-background {
+    display: none;
+  }
+
+  // 移动端使用纯色背景替代毛玻璃效果
+  .center {
+    background: var(--light) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .sidebar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
   .page > #quartz-body {
     > .sidebar.left {
-      background-color: transparent !important;
       padding: 0.8rem 1rem !important;
       position: sticky !important;
       top: 0;
       z-index: 100;
-      @include glass-effect($light-sidebar-bg, $light-border, $light-shadow);
-      border-bottom: 1px solid $light-border;
+      background: var(--light) !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
       border-radius: 0 0 16px 16px;
       margin-bottom: 1.5rem;
       gap: 1rem !important;
@@ -302,8 +319,18 @@ code:not(pre code) {
     }
   }
 
-  :root[saved-theme="dark"] .page > #quartz-body > .sidebar.left {
-    @include glass-effect($dark-sidebar-bg, $dark-border, $dark-shadow);
-    border-bottom: 1px solid $dark-border;
+  :root[saved-theme="dark"] {
+    .center {
+      background: var(--dark) !important;
+    }
+
+    .sidebar {
+      background: var(--dark) !important;
+    }
+
+    .page > #quartz-body > .sidebar.left {
+      background: var(--dark) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
   }
 }
