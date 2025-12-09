@@ -50,7 +50,8 @@ $desktopGrid: (
   templateRows: "auto auto auto",
   templateColumns: "#{$sidePanelWidth} auto #{$sidePanelWidth}",
   rowGap: "5px",
-  columnGap: "1.5rem", // 增加列间距，让三栏更分明
+  columnGap: "1.5rem",
+  // 增加列间距，让三栏更分明
   templateAreas:
     '"grid-sidebar-left grid-header grid-sidebar-right"\
       "grid-sidebar-left grid-center grid-sidebar-right"\
