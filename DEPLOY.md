@@ -120,6 +120,53 @@ configuration: {
 
 - `NODE_VERSION`: `22`
 
+## Google 搜索收录
+
+要让 Google 收录你的网站，需要完成以下步骤：
+
+### 1. 修改 robots.txt
+
+编辑 `quartz/static/robots.txt`，将 Sitemap URL 改为你的域名：
+
+```txt
+User-agent: *
+Allow: /
+
+Sitemap: https://your-site.pages.dev/sitemap.xml
+```
+
+### 2. 获取 Google Search Console 验证码
+
+1. 访问 [Google Search Console](https://search.google.com/search-console)
+2. 点击 **添加资源**
+3. 选择 **"网址前缀"**（右侧），输入 `https://your-site.pages.dev/`
+4. 选择 **"HTML 标签"** 验证方式
+5. 复制 meta 标签中的 `content` 值（即验证码）
+
+### 3. 配置验证码
+
+在 `quartz.config.ts` 中配置你的验证码：
+
+```typescript
+configuration: {
+  // ...
+  googleSiteVerification: "你的验证码",  // fork 后请替换为你自己的
+  // ...
+}
+```
+
+部署网站后，回到 Search Console 点击验证。
+
+### 4. 提交站点地图
+
+验证成功后：
+
+1. 在 Search Console 左侧菜单选择 **站点地图**
+2. 输入 `sitemap.xml`
+3. 点击提交
+
+> **注意**：Google 索引新站点通常需要几天到几周时间。
+
 ## 常见问题
 
 ### Wrangler 端口被占用 / 页面无法加载

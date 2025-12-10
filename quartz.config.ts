@@ -15,6 +15,8 @@ const config: QuartzConfig = {
     analytics: {
       provider: "plausible",
     },
+    // Google Search Console 验证码，fork 后请替换为你自己的
+    googleSiteVerification: "cVJjK0bzRs-HKM4xz3cY6OMNG_ZaatotiR95JwYt3yw",
     locale: "zh-CN",
     baseUrl: "sean2077.pages.dev",
     ignorePatterns: [

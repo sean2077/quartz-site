@@ -65,6 +65,8 @@ export interface GlobalConfiguration {
   enablePopovers: boolean
   /** Analytics mode */
   analytics: Analytics
+  /** Google Search Console verification code (content value of google-site-verification meta tag) */
+  googleSiteVerification?: string
   /** Glob patterns to not search */
   ignorePatterns: string[]
   /** Whether to use created, modified, or published as the default type of date */
