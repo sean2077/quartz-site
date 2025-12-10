@@ -2,6 +2,7 @@
 // 动态背景组件样式
 // ==========================================
 
+@use "sass:list";
 @use "../../styles/variables.scss" as *;
 
 // ==========================================
@@ -126,9 +127,9 @@ $toc-colors-dark: (
 $time-phases: ("dawn", "morning", "noon", "afternoon", "dusk", "night");
 $time-extensions: ("png", "png", "jpg", "png", "jpg", "jpg");
 
-@for $i from 1 through length($time-phases) {
-  $phase: nth($time-phases, $i);
-  $ext: nth($time-extensions, $i);
+@for $i from 1 through list.length($time-phases) {
+  $phase: list.nth($time-phases, $i);
+  $ext: list.nth($time-extensions, $i);
 
   :root[data-time-phase="#{$phase}"] .dynamic-background {
     background-image: url("/static/A day in the corner of the city/#{$phase}.#{$ext}");
