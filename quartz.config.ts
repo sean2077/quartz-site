@@ -45,7 +45,7 @@ const config: QuartzConfig = {
       cdnCaching: true,
       typography: {
         header: { name: "LXGW WenKai", weights: [400, 700] },
-        body: { name: "LXGW WenKai", weights: [300, 400, 700], includeItalic: false },
+        body: { name: "LXGW WenKai", weights: [300, 400, 500, 700], includeItalic: false },
         code: "Fira Code",
       },
       colors: {

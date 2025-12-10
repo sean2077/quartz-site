@@ -11,8 +11,8 @@
 $glass-blur: 12px;
 
 // --- 背景遮罩 (来自 Obsidian 配置) ---
-// 亮色模式：更透明，让背景图更明显
-$light-mask-bg: rgba(245, 240, 230, 0.25);
+// 亮色模式：偏灰调遮罩，柔和不刺眼
+$light-mask-bg: rgba(180, 175, 165, 0.38);
 $dark-mask-bg: rgba(31, 30, 30, 0.38);
 
 // --- 毛玻璃透明度 ---
@@ -129,6 +129,7 @@ $time-extensions: ("png", "png", "jpg", "png", "jpg", "jpg");
 @for $i from 1 through length($time-phases) {
   $phase: nth($time-phases, $i);
   $ext: nth($time-extensions, $i);
+
   :root[data-time-phase="#{$phase}"] .dynamic-background {
     background-image: url("/static/A day in the corner of the city/#{$phase}.#{$ext}");
   }
@@ -140,10 +141,12 @@ $time-extensions: ("png", "png", "jpg", "png", "jpg", "jpg");
 
 .page > #quartz-body {
   > .sidebar {
-    padding-top: 2rem !important;
+    padding-top: 1rem !important;
   }
-  > .page-header {
-    margin-top: 2rem !important;
+
+  // 覆盖 base.scss 中的 $topSpacing (6rem)
+  .page-header {
+    margin: 1rem 0 0 0 !important;
   }
 }
 
@@ -179,6 +182,11 @@ $time-extensions: ("png", "png", "jpg", "png", "jpg", "jpg");
 // ==========================================
 // 亮色主题样式 (使用 color-mix 复用 --light 变量)
 // ==========================================
+
+// 亮色主题下增加正文字体粗细，提高可读性
+body {
+  font-weight: 500;
+}
 
 .center {
   // 简洁的毛玻璃背景，温暖色调
@@ -315,6 +323,7 @@ code:not(pre code) {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
+
   .page > #quartz-body {
     > .sidebar.left {
       padding: 0.8rem 1rem !important;
