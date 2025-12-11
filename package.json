@@ -19,7 +19,9 @@
     "test": "tsx --test",
     "profile": "0x -D prof ./quartz/bootstrap-cli.mjs build --concurrency=1",
     "build": "npx quartz build -d obsidian-vault --concurrency 8",
-    "dev": "npx wrangler pages dev public"
+    "dev": "npx wrangler pages dev public",
+    "deploy": "npx wrangler pages deploy public --project-name=sean2077 --branch=main",
+    "release": "npm run build && npm run deploy"
   },
   "engines": {
     "npm": ">=10.9.2",
