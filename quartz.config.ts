@@ -118,6 +118,7 @@ const config: QuartzConfig = {
       Plugin.ContentIndex({
         enableSiteMap: true,
         enableRSS: true,
+        rssLimit: 9999, // 包含所有笔记（默认只有 10 条）
       }),
       Plugin.OnDemandAssets(),
       Plugin.Static(),
