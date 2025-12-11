@@ -351,15 +351,15 @@ code:not(pre code) {
 
   :root[saved-theme="dark"] {
     .center {
-      background: var(--dark) !important;
+      background: var(--light) !important;
     }
 
     .sidebar {
-      background: var(--dark) !important;
+      background: var(--light) !important;
     }
 
     .page > #quartz-body > .sidebar.left {
-      background: var(--dark) !important;
+      background: var(--light) !important;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
   }
