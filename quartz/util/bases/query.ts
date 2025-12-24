@@ -3,27 +3,34 @@ import { FilterExpression, FilterFn, BaseConfig, SortConfig, PropertyValue } fro
 
 /**
  * Parse a filter expression and return a filter function
+ * @param expression - The filter expression to parse
+ * @param currentFile - The file containing the base block (for this.file references)
  */
-export function parseFilter(expression: FilterExpression): FilterFn {
+export function parseFilter(
+  expression: FilterExpression,
+  currentFile?: QuartzPluginData,
+): FilterFn {
   // Handle nested logical structures
   if (typeof expression === "object") {
     if ("and" in expression) {
-      const subFilters = expression.and.map(parseFilter)
-      return (file, allFiles) => subFilters.every((fn) => fn(file, allFiles))
+      const subFilters = expression.and.map((e) => parseFilter(e, currentFile))
+      return (file, allFiles, cf) =>
+        subFilters.every((fn) => fn(file, allFiles, cf ?? currentFile))
     }
     if ("or" in expression) {
-      const subFilters = expression.or.map(parseFilter)
-      return (file, allFiles) => subFilters.some((fn) => fn(file, allFiles))
+      const subFilters = expression.or.map((e) => parseFilter(e, currentFile))
+      return (file, allFiles, cf) =>
+        subFilters.some((fn) => fn(file, allFiles, cf ?? currentFile))
     }
     if ("not" in expression) {
-      const subFilter = parseFilter(expression.not)
-      return (file, allFiles) => !subFilter(file, allFiles)
+      const subFilter = parseFilter(expression.not, currentFile)
+      return (file, allFiles, cf) => !subFilter(file, allFiles, cf ?? currentFile)
     }
   }
 
   // Handle string filter expressions
   if (typeof expression === "string") {
-    return parseFilterString(expression)
+    return parseFilterString(expression, currentFile)
   }
 
   // Default: accept all
@@ -31,15 +38,70 @@ export function parseFilter(expression: FilterExpression): FilterFn {
 }
 
 /**
- * Parse a string filter expression like "file.hasTag('book')" or "status == 'done'"
+ * Get the folder path from a file's slug
  */
-function parseFilterString(expr: string): FilterFn {
+function getFileFolder(file: QuartzPluginData): string {
+  const slug = file.slug ?? ""
+  const lastSlash = slug.lastIndexOf("/")
+  return lastSlash > 0 ? slug.substring(0, lastSlash) : ""
+}
+
+/**
+ * Parse a string filter expression like "file.hasTag('book')" or "status == 'done'"
+ * @param expr - The filter expression string
+ * @param currentFile - The file containing the base block (for this.file references)
+ */
+function parseFilterString(expr: string, currentFile?: QuartzPluginData): FilterFn {
   const trimmed = expr.trim()
+
+  // Resolve this.file.* references by replacing them with actual values
+  if (trimmed.includes("this.file.")) {
+    let resolved = trimmed
+
+    // this.file.folder - current file's folder path
+    if (resolved.includes("this.file.folder")) {
+      const folder = currentFile ? getFileFolder(currentFile) : ""
+      resolved = resolved.replace(/this\.file\.folder/g, `"${folder}"`)
+    }
+
+    // this.file.name - current file's name/title
+    if (resolved.includes("this.file.name")) {
+      const name = currentFile?.frontmatter?.title ?? currentFile?.slug?.split("/").pop() ?? ""
+      resolved = resolved.replace(/this\.file\.name/g, `"${name}"`)
+    }
+
+    // this.file.path - current file's full path
+    if (resolved.includes("this.file.path")) {
+      const path = currentFile?.slug ?? ""
+      resolved = resolved.replace(/this\.file\.path/g, `"${path}"`)
+    }
+
+    // If we made replacements, re-parse with resolved values
+    if (resolved !== trimmed) {
+      return parseFilterString(resolved, currentFile)
+    }
+  }
+
+  // 1. Negation prefix: !expression
+  if (trimmed.startsWith("!")) {
+    const innerFn = parseFilterString(trimmed.slice(1), currentFile)
+    return (file, allFiles, cf) => !innerFn(file, allFiles, cf)
+  }
 
   // file.hasTag("tag")
   const hasTagMatch = trimmed.match(/^file\.hasTag\s*\(\s*["']([^"']+)["']\s*\)$/)
   if (hasTagMatch) {
     const tag = hasTagMatch[1]
+    return (file) => {
+      const tags = file.frontmatter?.tags ?? []
+      return tags.some((t) => t.toLowerCase() === tag.toLowerCase())
+    }
+  }
+
+  // file.tags.contains("tag") - Obsidian Bases native syntax
+  const tagsContainsMatch = trimmed.match(/^file\.tags\.contains\s*\(\s*["']([^"']+)["']\s*\)$/)
+  if (tagsContainsMatch) {
+    const tag = tagsContainsMatch[1]
     return (file) => {
       const tags = file.frontmatter?.tags ?? []
       return tags.some((t) => t.toLowerCase() === tag.toLowerCase())
@@ -56,6 +118,38 @@ function parseFilterString(expr: string): FilterFn {
     }
   }
 
+  // file.name.contains("str") / file.name.startsWith("str") / file.name.endsWith("str")
+  const fileNameMethodMatch = trimmed.match(
+    /^file\.name\.(contains|startsWith|endsWith)\s*\(\s*["']([^"']+)["']\s*\)$/,
+  )
+  if (fileNameMethodMatch) {
+    const [, method, value] = fileNameMethodMatch
+    return (file) => {
+      const name = (file.frontmatter?.title ?? file.slug?.split("/").pop() ?? "").toLowerCase()
+      const v = value.toLowerCase()
+      if (method === "contains") return name.includes(v)
+      if (method === "startsWith") return name.startsWith(v)
+      if (method === "endsWith") return name.endsWith(v)
+      return false
+    }
+  }
+
+  // file.name.lower().contains("str") - chained call with lower()
+  const fileNameLowerMethodMatch = trimmed.match(
+    /^file\.name\.lower\(\)\.(contains|startsWith|endsWith)\s*\(\s*["']([^"']+)["']\s*\)$/,
+  )
+  if (fileNameLowerMethodMatch) {
+    const [, method, value] = fileNameLowerMethodMatch
+    return (file) => {
+      const name = (file.frontmatter?.title ?? file.slug?.split("/").pop() ?? "").toLowerCase()
+      const v = value.toLowerCase()
+      if (method === "contains") return name.includes(v)
+      if (method === "startsWith") return name.startsWith(v)
+      if (method === "endsWith") return name.endsWith(v)
+      return false
+    }
+  }
+
   // file.hasLink("note")
   const hasLinkMatch = trimmed.match(/^file\.hasLink\s*\(\s*["']([^"']+)["']\s*\)$/)
   if (hasLinkMatch) {
@@ -69,6 +163,55 @@ function parseFilterString(expr: string): FilterFn {
     }
   }
 
+  // property.contains("value") / property.startsWith("value") / property.endsWith("value")
+  // Also handles arrays: checks if any element matches
+  const propMethodMatch = trimmed.match(
+    /^([\w.]+)\.(contains|startsWith|endsWith)\s*\(\s*["']([^"']+)["']\s*\)$/,
+  )
+  if (propMethodMatch) {
+    const [, propPath, method, value] = propMethodMatch
+    // Skip file.name.* and file.tags.* which are handled separately
+    if (!propPath.startsWith("file.")) {
+      return (file) => {
+        const propValue = getPropertyValue(file, propPath)
+        if (propValue === null || propValue === undefined) return false
+
+        const v = value.toLowerCase()
+
+        // Handle arrays: check if any element matches
+        if (Array.isArray(propValue)) {
+          return propValue.some((item) => {
+            const itemStr = String(item).toLowerCase()
+            if (method === "contains") return itemStr.includes(v)
+            if (method === "startsWith") return itemStr.startsWith(v)
+            if (method === "endsWith") return itemStr.endsWith(v)
+            return false
+          })
+        }
+
+        // Handle strings
+        const strValue = String(propValue).toLowerCase()
+        if (method === "contains") return strValue.includes(v)
+        if (method === "startsWith") return strValue.startsWith(v)
+        if (method === "endsWith") return strValue.endsWith(v)
+        return false
+      }
+    }
+  }
+
+  // property.isEmpty() - check if property is empty/null/undefined
+  const isEmptyMatch = trimmed.match(/^([\w.]+)\.isEmpty\s*\(\s*\)$/)
+  if (isEmptyMatch) {
+    const propPath = isEmptyMatch[1]
+    return (file) => {
+      const value = getPropertyValue(file, propPath)
+      if (value === null || value === undefined) return true
+      if (Array.isArray(value)) return value.length === 0
+      if (typeof value === "string") return value.trim() === ""
+      return false
+    }
+  }
+
   // Property comparisons: property == value, property != value, etc.
   const comparisonMatch = trimmed.match(/^([\w.]+)\s*(==|!=|>=|<=|>|<)\s*["']?([^"']+)["']?$/)
   if (comparisonMatch) {
@@ -77,6 +220,38 @@ function parseFilterString(expr: string): FilterFn {
       const propValue = getPropertyValue(file, propPath)
       const compareValue = parseValue(valueStr)
       return compareValues(propValue, operator, compareValue)
+    }
+  }
+
+  // Function-style aliases: taggedWith(file.file, "tag")
+  const taggedWithMatch = trimmed.match(/^taggedWith\s*\(\s*file\.file\s*,\s*["']([^"']+)["']\s*\)$/)
+  if (taggedWithMatch) {
+    const tag = taggedWithMatch[1]
+    return (file) => {
+      const tags = file.frontmatter?.tags ?? []
+      return tags.some((t) => t.toLowerCase() === tag.toLowerCase())
+    }
+  }
+
+  // linksTo(file.file, "target") or linksTo(file.file, this.file.path)
+  const linksToMatch = trimmed.match(/^linksTo\s*\(\s*file\.file\s*,\s*["']([^"']+)["']\s*\)$/)
+  if (linksToMatch) {
+    const target = linksToMatch[1].toLowerCase()
+    return (file) => {
+      const links = file.links ?? []
+      return links.some((link) => String(link).toLowerCase().includes(target))
+    }
+  }
+
+  // inFolder(file.file, "folder")
+  const inFolderFuncMatch = trimmed.match(
+    /^inFolder\s*\(\s*file\.file\s*,\s*["']([^"']+)["']\s*\)$/,
+  )
+  if (inFolderFuncMatch) {
+    const folder = inFolderFuncMatch[1]
+    return (file) => {
+      const slug = file.slug ?? ""
+      return slug.startsWith(folder) || slug.includes(`/${folder}/`)
     }
   }
 
@@ -249,18 +424,23 @@ export function sortFiles(files: QuartzPluginData[], sortConfig: SortConfig[]): 
 
 /**
  * Execute a query against all files
+ * @param allFiles - All available files to query
+ * @param config - Base configuration with filters, views, etc.
+ * @param maxResults - Maximum number of results to return
+ * @param currentFile - The file containing the base block (for this.file references)
  */
 export function executeQuery(
   allFiles: QuartzPluginData[],
   config: BaseConfig,
   maxResults: number = 100,
+  currentFile?: QuartzPluginData,
 ): QuartzPluginData[] {
   let files = [...allFiles]
 
   // Apply global filters (top-level)
   if (config.filters) {
-    const filterFn = parseFilter(config.filters)
-    files = files.filter((f) => filterFn(f, allFiles))
+    const filterFn = parseFilter(config.filters, currentFile)
+    files = files.filter((f) => filterFn(f, allFiles, currentFile))
   }
 
   // Apply first view's config
@@ -268,8 +448,8 @@ export function executeQuery(
 
   // Apply view-level filters (Obsidian puts filters inside views)
   if (firstView?.filters) {
-    const viewFilterFn = parseFilter(firstView.filters)
-    files = files.filter((f) => viewFilterFn(f, allFiles))
+    const viewFilterFn = parseFilter(firstView.filters, currentFile)
+    files = files.filter((f) => viewFilterFn(f, allFiles, currentFile))
   }
 
   // Apply sort

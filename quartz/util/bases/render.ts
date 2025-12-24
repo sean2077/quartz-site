@@ -48,8 +48,8 @@ export function renderBasePlaceholders(
     }
 
     try {
-      // Execute query
-      const filteredFiles = executeQuery(allFiles, block.config, options.maxResults)
+      // Execute query (pass fileData as currentFile for this.file references)
+      const filteredFiles = executeQuery(allFiles, block.config, options.maxResults, fileData)
 
       // Render views
       const currentSlug = (fileData.slug ?? "") as FullSlug

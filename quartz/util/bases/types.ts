@@ -60,8 +60,12 @@ export interface QueryResult {
   computedProperties: Map<string, Record<string, unknown>>
 }
 
-// Filter function type
-export type FilterFn = (file: QuartzPluginData, allFiles: QuartzPluginData[]) => boolean
+// Filter function type (currentFile is the file containing the base block)
+export type FilterFn = (
+  file: QuartzPluginData,
+  allFiles: QuartzPluginData[],
+  currentFile?: QuartzPluginData,
+) => boolean
 
 // Property value types
 export type PropertyValue = string | number | boolean | Date | string[] | null | undefined
