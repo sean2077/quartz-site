@@ -4,7 +4,7 @@ import * as Plugin from "./quartz/plugins"
 /**
  * Quartz 4 Configuration
  *
- * See https://quartz.jzhao.xyz/configuration for more information.
+ * See https://quartz.jzhao.xyz/configuration for more information (upstream docs).
  */
 const config: QuartzConfig = {
   configuration: {

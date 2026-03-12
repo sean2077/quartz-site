@@ -14,13 +14,11 @@ export function parseFilter(
   if (typeof expression === "object") {
     if ("and" in expression) {
       const subFilters = expression.and.map((e) => parseFilter(e, currentFile))
-      return (file, allFiles, cf) =>
-        subFilters.every((fn) => fn(file, allFiles, cf ?? currentFile))
+      return (file, allFiles, cf) => subFilters.every((fn) => fn(file, allFiles, cf ?? currentFile))
     }
     if ("or" in expression) {
       const subFilters = expression.or.map((e) => parseFilter(e, currentFile))
-      return (file, allFiles, cf) =>
-        subFilters.some((fn) => fn(file, allFiles, cf ?? currentFile))
+      return (file, allFiles, cf) => subFilters.some((fn) => fn(file, allFiles, cf ?? currentFile))
     }
     if ("not" in expression) {
       const subFilter = parseFilter(expression.not, currentFile)
@@ -224,7 +222,9 @@ function parseFilterString(expr: string, currentFile?: QuartzPluginData): Filter
   }
 
   // Function-style aliases: taggedWith(file.file, "tag")
-  const taggedWithMatch = trimmed.match(/^taggedWith\s*\(\s*file\.file\s*,\s*["']([^"']+)["']\s*\)$/)
+  const taggedWithMatch = trimmed.match(
+    /^taggedWith\s*\(\s*file\.file\s*,\s*["']([^"']+)["']\s*\)$/,
+  )
   if (taggedWithMatch) {
     const tag = taggedWithMatch[1]
     return (file) => {
