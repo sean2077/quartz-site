@@ -12,6 +12,10 @@ html {
   width: 100vw;
   // iOS Safari: ensure proper height calculation
   height: 100%;
+
+  @media all and ($mobile) {
+    scroll-padding-top: 4rem;
+  }
 }
 
 body {
