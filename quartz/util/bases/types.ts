@@ -27,7 +27,7 @@ export interface SortConfig {
 
 // View configuration
 export interface ViewConfig {
-  type: "table" | "card" | "list" | "map"
+  type: "table" | "card" | "list" | "map" | "paginated-table"
   name: string
   filters?: FilterExpression
   order?: string[]
@@ -38,6 +38,11 @@ export interface ViewConfig {
   lat?: string
   long?: string
   title?: string
+  // Paginated-table-specific properties
+  pageSize?: number
+  showSearchBox?: boolean
+  stickyHeader?: boolean
+  paginationPosition?: "top" | "bottom"
 }
 
 // Main Base configuration (YAML schema)

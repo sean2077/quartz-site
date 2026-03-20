@@ -71,6 +71,8 @@ function renderSingleView(
       return renderListView(view, files, properties, currentSlug)
     case "map":
       return renderMapView(view, files, properties, currentSlug)
+    case "paginated-table":
+      return renderPaginatedTableView(view, files, properties, currentSlug)
     default:
       return `<div class="base-error">Unknown view type: ${(view as ViewConfig).type}</div>`
   }
@@ -120,6 +122,120 @@ function renderTableView(
       </table>
     </div>
   `
+}
+
+/**
+ * Render paginated table view
+ * All rows are rendered server-side; client-side JS handles pagination, search, sort, and quick-filter.
+ */
+function renderPaginatedTableView(
+  view: ViewConfig,
+  files: QuartzPluginData[],
+  properties: Record<string, PropertyConfig>,
+  currentSlug: FullSlug,
+): string {
+  const order = view.order ?? ["file.name"]
+  const pageSize = view.pageSize ?? 25
+  const showSearchBox = view.showSearchBox !== false
+  const stickyHeader = view.stickyHeader !== false
+  const paginationPosition = view.paginationPosition ?? "top"
+
+  if (files.length === 0) {
+    return `<div class="base-view base-paginated-table base-empty">No matching files found</div>`
+  }
+
+  // Build header cells
+  const headerCells = order
+    .map((prop) => {
+      const displayName = properties[prop]?.displayName ?? formatPropertyName(prop)
+      return `<th data-property="${escapeHtml(prop)}">${escapeHtml(displayName)}</th>`
+    })
+    .join("")
+
+  // Build rows with data attributes for client-side filtering
+  const rows = files
+    .map((file) => {
+      const searchParts: string[] = []
+      const cells = order
+        .map((prop) => {
+          const value = getPropertyValue(file, prop)
+          const displayValue = formatValue(value, file, prop, currentSlug)
+          // Extract raw text for search and quick-filter
+          const rawText = extractRawText(value, file, prop)
+          searchParts.push(rawText.toLowerCase())
+          return `<td data-col="${escapeHtml(prop)}" data-value="${escapeHtml(rawText)}">${displayValue}</td>`
+        })
+        .join("")
+      const searchable = escapeHtml(searchParts.join(" "))
+      return `<tr data-searchable="${searchable}">${cells}</tr>`
+    })
+    .join("")
+
+  // Build toolbar
+  const searchHtml = showSearchBox
+    ? `<input class="bpt-search" type="text" placeholder="Search..." aria-label="Search table" />`
+    : ""
+
+  const defaultSizes = [10, 25, 50, 100]
+  const sizes = defaultSizes.includes(pageSize)
+    ? defaultSizes
+    : [...defaultSizes, pageSize].sort((a, b) => a - b)
+  const pageSizeOptions = sizes
+    .map(
+      (size) => `<option value="${size}"${size === pageSize ? " selected" : ""}>${size}</option>`,
+    )
+    .join("")
+
+  const paginationHtml = `
+    <div class="bpt-pagination">
+      <span class="bpt-page-info"></span>
+      <button class="bpt-prev" disabled aria-label="Previous page">&larr;</button>
+      <button class="bpt-next" aria-label="Next page">&rarr;</button>
+      <select class="bpt-page-size-select" aria-label="Items per page">${pageSizeOptions}</select>
+    </div>
+  `
+
+  const toolbarHtml = `<div class="bpt-toolbar">${searchHtml}${paginationHtml}</div>`
+
+  const tableHtml = `
+    <div class="bpt-table-wrapper">
+      <table>
+        <thead><tr>${headerCells}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `
+
+  return `
+    <div class="base-view base-paginated-table"
+         data-page-size="${pageSize}"
+         data-sticky-header="${stickyHeader}"
+         data-pagination-position="${paginationPosition}">
+      ${paginationPosition === "top" ? toolbarHtml : ""}
+      <div class="bpt-active-filters"></div>
+      ${tableHtml}
+      ${paginationPosition === "bottom" ? toolbarHtml : ""}
+    </div>
+  `
+}
+
+/**
+ * Extract raw text from a property value for search/filter data attributes.
+ */
+function extractRawText(value: PropertyValue, file: QuartzPluginData, prop: string): string {
+  if (prop === "file.name") {
+    return file.frontmatter?.title ?? file.slug?.split("/").pop() ?? "Untitled"
+  }
+  if (value === null || value === undefined) return ""
+  if (value instanceof Date) {
+    const year = value.getFullYear()
+    const month = String(value.getMonth() + 1).padStart(2, "0")
+    const day = String(value.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+  if (Array.isArray(value)) return value.join(", ")
+  if (typeof value === "boolean") return value ? "Yes" : "No"
+  return String(value)
 }
 
 /**

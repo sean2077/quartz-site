@@ -72,7 +72,8 @@
 // ============================================
 // Table View - inherit theme's table style
 // ============================================
-.base-view.base-table {
+.base-view.base-table,
+.base-view.base-paginated-table {
   overflow-x: auto;
 
   table {
@@ -134,6 +135,139 @@
     tbody tr:hover {
       background: var(--highlight);
     }
+  }
+}
+
+// ============================================
+// Paginated Table View - extra controls
+// ============================================
+.base-view.base-paginated-table {
+  // Override inherited overflow-x from shared table styles —
+  // scroll is handled by .bpt-table-wrapper, not the outer container
+  overflow-x: visible;
+
+  .bpt-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .bpt-search {
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background: var(--light);
+    color: var(--dark);
+    min-width: 180px;
+    outline: none;
+
+    &:focus {
+      border-color: var(--secondary);
+    }
+  }
+
+  .bpt-pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--darkgray);
+  }
+
+  .bpt-prev,
+  .bpt-next {
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    color: var(--dark);
+    font-size: 0.8rem;
+
+    &:hover:not(:disabled) {
+      background: var(--highlight);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+  }
+
+  .bpt-page-size-select {
+    padding: 0.2rem 0.4rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 4px;
+    background: var(--light);
+    color: var(--dark);
+    font-size: 0.8rem;
+  }
+
+  .bpt-active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  .bpt-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.5rem;
+    background: var(--highlight);
+    border: none;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    color: var(--secondary);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--tertiary);
+      color: var(--light);
+    }
+
+    .bpt-chip-remove {
+      font-weight: bold;
+    }
+  }
+
+  .bpt-table-wrapper {
+    overflow-x: auto;
+  }
+
+  // Sticky header
+  &[data-sticky-header="true"] .bpt-table-wrapper {
+    max-height: 70vh;
+    overflow-y: auto;
+
+    // Use border-spacing:0 instead of border-collapse for sticky to work with borders
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    table thead {
+      position: sticky;
+      top: 0;
+      background: var(--light);
+      z-index: 1;
+    }
+  }
+
+  // Quick-filter hover hint on cells without links
+  table tbody td[data-value]:not(:has(a)):hover {
+    background: var(--highlight);
+    cursor: pointer;
   }
 }
 
@@ -296,7 +430,8 @@
     grid-template-columns: 1fr;
   }
 
-  .base-view.base-table {
+  .base-view.base-table,
+  .base-view.base-paginated-table {
     table {
       font-size: 0.9rem;
 
@@ -315,6 +450,23 @@
       a.internal {
         min-width: unset;
       }
+    }
+  }
+
+  .base-view.base-paginated-table {
+    .bpt-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .bpt-search {
+      min-width: unset;
+      width: 100%;
+    }
+
+    .bpt-pagination {
+      justify-content: center;
+      flex-wrap: wrap;
     }
   }
 

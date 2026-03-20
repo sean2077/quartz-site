@@ -460,8 +460,9 @@ export function executeQuery(
     files = sortFiles(files, [{ property: "file.name", direction: "asc" }])
   }
 
-  // Apply limit
-  const limit = firstView?.limit ?? maxResults
+  // Apply limit (paginated-table views skip default cap — pagination handles display)
+  const isPaginated = firstView?.type === "paginated-table"
+  const limit = firstView?.limit ?? (isPaginated ? 0 : maxResults)
   if (limit > 0) {
     files = files.slice(0, limit)
   }
