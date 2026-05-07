@@ -11,6 +11,7 @@ private/
 replit.nix
 .quartz/
 .omx/
+.playwright-mcp/
 quartz/cli/tui/dist/
 
 # User-specific Obsidian vault files

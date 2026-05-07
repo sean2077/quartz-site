@@ -99,6 +99,9 @@ plugins:
     options:
       markdownLinkResolution: shortest
     order: 60
+  - source: ./plugins/local/folder-note-links
+    enabled: true
+    order: 61
   - source: github:quartz-community/description
     enabled: true
     order: 70

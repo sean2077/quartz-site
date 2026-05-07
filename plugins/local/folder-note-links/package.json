@@ -1,0 +1,18 @@
+{
+  "name": "folder-note-links",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "quartz": {
+    "name": "folder-note-links",
+    "displayName": "Folder Note Links",
+    "description": "Repairs broken internal links that should resolve to Obsidian folder-note index pages.",
+    "version": "1.0.0",
+    "category": "transformer",
+    "quartzVersion": ">=5.0.0",
+    "defaultOrder": 61,
+    "defaultEnabled": true
+  }
+}
