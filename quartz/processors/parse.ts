@@ -64,6 +64,11 @@ async function transpileWorkerScript() {
     packages: "external",
     sourcemap: true,
     sourcesContent: false,
+    logOverride: {
+      "direct-eval": "silent",
+      "equals-negative-zero": "silent",
+      "duplicate-object-key": "silent",
+    },
     plugins: [
       {
         name: "css-and-scripts-as-text",

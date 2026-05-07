@@ -62,7 +62,7 @@ plugins:
   - source: ./plugins/local/head-meta
     enabled: true
     order: 5
-  - source: github:quartz-community/created-modified-date
+  - source: ./plugins/local/created-modified-date
     enabled: true
     options:
       defaultDateType: modified
@@ -109,6 +109,9 @@ plugins:
       katexOptions:
         strict: false
     order: 80
+  - source: ./plugins/local/math-cleanup
+    enabled: true
+    order: 79
   - source: ./plugins/local/obsidian-bases
     enabled: true
     order: 90

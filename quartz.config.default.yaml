@@ -41,7 +41,7 @@ configuration:
         highlight: rgba(143, 159, 169, 0.15)
         textHighlight: "#b3aa0288"
 plugins:
-  - source: github:quartz-community/created-modified-date
+  - source: ./plugins/local/created-modified-date
     enabled: true
     options:
       defaultDateType: modified
@@ -83,6 +83,9 @@ plugins:
     options:
       renderEngine: katex
     order: 80
+  - source: ./plugins/local/math-cleanup
+    enabled: true
+    order: 79
   - source: github:quartz-community/citations
     enabled: false
     order: 85
