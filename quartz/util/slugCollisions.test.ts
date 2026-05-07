@@ -79,6 +79,17 @@ describe("detectSlugCollisions", () => {
     ]
     assert.deepStrictEqual(detectSlugCollisions(content), [])
   })
+
+  test("winner annotation matches fileTrie last-insert-wins semantics", () => {
+    // Glob order is alphabetical: foo/foo.md sorts before foo/index.md.
+    // Both the fileTrie and this detector must agree that the second file wins.
+    const content = makeContent([
+      { slug: "foo/index", relativePath: "foo/foo.md" },
+      { slug: "foo/index", relativePath: "foo/index.md" },
+    ])
+    const collisions = detectSlugCollisions(content)
+    assert.strictEqual(collisions[0]!.winner.relativePath, "foo/index.md")
+  })
 })
 
 describe("formatCollisionWarning", () => {
@@ -91,7 +102,8 @@ describe("formatCollisionWarning", () => {
       { slug: "foo/index", relativePath: "foo/foo.md" },
       { slug: "foo/index", relativePath: "foo/index.md" },
     ])
-    const output = formatCollisionWarning(detectSlugCollisions(content))
+    const collisions = detectSlugCollisions(content)
+    const output = formatCollisionWarning(collisions)
     assert.match(output, /1 slug collision detected/)
     assert.match(output, /foo\/index/)
     assert.match(output, /foo\/foo\.md .*\(shadowed\)/)
@@ -105,7 +117,8 @@ describe("formatCollisionWarning", () => {
       { slug: "b/index", relativePath: "b/b.md" },
       { slug: "b/index", relativePath: "b/index.md" },
     ])
-    const output = formatCollisionWarning(detectSlugCollisions(content))
+    const collisions = detectSlugCollisions(content)
+    const output = formatCollisionWarning(collisions)
     assert.match(output, /2 slug collisions detected/)
     assert.match(output, /a\/index/)
     assert.match(output, /b\/index/)

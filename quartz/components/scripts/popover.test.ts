@@ -14,9 +14,13 @@ interface FakePopoverInner {
 interface FakePopoverElement {
   classList: {
     add: (cls: string) => void
+    remove: (cls: string) => void
     _added: string[]
+    _removed: string[]
   }
+  style: Record<string, string>
   querySelector: (sel: string) => FakePopoverInner | null
+  _inner: FakePopoverInner
 }
 
 function makeInner(heading: FakeHeading | null = null): FakePopoverInner {
@@ -36,23 +40,32 @@ function makeInner(heading: FakeHeading | null = null): FakePopoverInner {
 
 function makePopoverElement(inner: FakePopoverInner): FakePopoverElement {
   const added: string[] = []
+  const removed: string[] = []
   return {
     classList: {
       add(cls) {
         added.push(cls)
       },
+      remove(cls) {
+        removed.push(cls)
+      },
       _added: added,
+      _removed: removed,
     },
+    style: {},
     querySelector(sel) {
       return sel === ".popover-inner" ? inner : null
     },
+    _inner: inner,
   }
 }
+
+type SetPosition = (el: FakePopoverElement) => Promise<void>
 
 function fixedShowPopover(
   popoverElement: FakePopoverElement,
   hash: string,
-  setPosition: (el: FakePopoverElement) => Promise<void>,
+  setPosition: SetPosition,
 ): Promise<void> {
   popoverElement.classList.add("active-popover")
   const positionResult = setPosition(popoverElement)
@@ -79,8 +92,15 @@ describe("showPopover on cache-hit with hash", () => {
 
     await fixedShowPopover(popoverElement, "#plugins", async () => {})
 
-    assert.ok(popoverElement.classList._added.includes("active-popover"))
-    assert.deepStrictEqual(inner._scrolled, { top: 188, behavior: "instant" })
+    assert.ok(
+      popoverElement.classList._added.includes("active-popover"),
+      "active-popover class must be applied",
+    )
+    assert.deepStrictEqual(
+      inner._scrolled,
+      { top: 200 - 12, behavior: "instant" },
+      "scroll must target heading.offsetTop - 12",
+    )
     assert.deepStrictEqual(inner._selectorsQueried, ["#popover-internal-plugins"])
   })
 
@@ -103,20 +123,34 @@ describe("showPopover on cache-hit with hash", () => {
     assert.strictEqual(inner._scrolled, null)
     assert.deepStrictEqual(inner._selectorsQueried, ["#popover-internal-nonexistent"])
   })
+
+  test("decodes percent-encoded fragments when building the selector", async () => {
+    const heading: FakeHeading = { offsetTop: 50 }
+    const inner = makeInner(heading)
+    const popoverElement = makePopoverElement(inner)
+
+    await fixedShowPopover(popoverElement, "#a-b", async () => {})
+
+    assert.deepStrictEqual(inner._selectorsQueried, ["#popover-internal-a-b"])
+  })
 })
 
-describe("buggy showPopover regression guard", () => {
-  test("accessing a capture-before-declaration variable throws ReferenceError", () => {
+describe("buggy showPopover (lexical-capture pattern) regression guard", () => {
+  test("accessing a capture-before-declaration variable throws ReferenceError (TDZ simulation)", () => {
     function simulateBuggyMouseEnter(hash: string) {
       function buggyShowPopover(popoverElement: FakePopoverElement) {
         popoverElement.classList.add("active-popover")
         if (hash !== "") {
-          const _unused = popoverInner.querySelector("x")
-          void _unused
+          const targetAnchor = `#popover-internal-${hash.slice(1)}`
+          const heading = popoverInner.querySelector(targetAnchor)
+          if (heading) {
+            popoverInner.scroll({ top: heading.offsetTop - 12, behavior: "instant" })
+          }
         }
       }
 
-      const cachedElement = makePopoverElement(makeInner({ offsetTop: 999 }))
+      const cachedInner = makeInner({ offsetTop: 999 })
+      const cachedElement = makePopoverElement(cachedInner)
       buggyShowPopover(cachedElement)
 
       const popoverInner = makeInner(null)
@@ -126,5 +160,26 @@ describe("buggy showPopover regression guard", () => {
     assert.throws(() => simulateBuggyMouseEnter("#plugins"), {
       name: "ReferenceError",
     })
+  })
+
+  test("same pattern does NOT throw when hash is empty (explains why first link without fragment works)", () => {
+    function simulateBuggyMouseEnter(hash: string) {
+      function buggyShowPopover(popoverElement: FakePopoverElement) {
+        popoverElement.classList.add("active-popover")
+        if (hash !== "") {
+          const _unused = popoverInner.querySelector("x")
+          void _unused
+        }
+      }
+
+      const cachedInner = makeInner(null)
+      const cachedElement = makePopoverElement(cachedInner)
+      buggyShowPopover(cachedElement)
+
+      const popoverInner = makeInner(null)
+      return popoverInner
+    }
+
+    assert.doesNotThrow(() => simulateBuggyMouseEnter(""))
   })
 })

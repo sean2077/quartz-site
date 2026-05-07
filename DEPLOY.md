@@ -1,4 +1,4 @@
-# Quartz 部署指南
+# Quartz v5 部署指南
 
 本指南详细介绍如何将 Quartz 网站手动部署到 Cloudflare Pages。
 
@@ -12,10 +12,10 @@
 
 ```bash
 # 构建网站（输出到 public/ 目录）
-npx quartz build -d obsidian-vault --concurrency 8
+npm run build
 
 # 本地测试（模拟 Cloudflare Pages 行为）
-npx wrangler pages dev public
+npm run dev
 # 访问 http://localhost:8788 验证
 ```
 
@@ -30,7 +30,7 @@ npx wrangler pages dev public
 3. 点击 **Create** 按钮
 4. 选择 **Pages** 标签
 5. 选择 **Direct Upload**（直接上传）
-6. 输入项目名称（例如：`quartz-site`）
+6. 输入项目名称（当前站点使用 `sean2077`）
 7. 点击 **Create project**
 
 > 注意：首次创建时会要求上传文件，可以先上传一个空目录或直接用 CLI 上传。
@@ -64,7 +64,7 @@ npx wrangler pages deploy public --project-name=sean2077 --branch=main
 部署成功后，会显示类似：
 
 ```
-✨ Deployment complete! Take a peek over at https://xxxxxxxx.quartz-site.pages.dev
+✨ Deployment complete! Take a peek over at https://xxxxxxxx.sean2077.pages.dev
 ```
 
 ### 后续更新部署
@@ -73,22 +73,19 @@ npx wrangler pages deploy public --project-name=sean2077 --branch=main
 
 ```bash
 # 1. 构建
-npx quartz build -d obsidian-vault --concurrency 8
+npm run build
 
 # 2. 本地测试（可选）
-npx wrangler pages dev public
+npm run dev
 
 # 3. 部署
-npx wrangler pages deploy public --project-name=quartz-site
+npm run deploy
 ```
 
 可以创建一个脚本简化操作：
 
 ```bash
-# deploy.sh
-#!/bin/bash
-npx quartz build -d obsidian-vault --concurrency 8 && \
-npx wrangler pages deploy public --project-name=quartz-site
+npm run release
 ```
 
 ## 配置自定义域名（可选）
@@ -103,15 +100,13 @@ npx wrangler pages deploy public --project-name=quartz-site
 
 ## 重要配置
 
-### quartz.config.ts
+### quartz.config.yaml
 
 确保 `baseUrl` 配置正确：
 
-```typescript
-configuration: {
-  baseUrl: "your-domain.com",  // 不要包含 https:// 或尾部斜杠
-  // ...
-}
+```yaml
+configuration:
+  baseUrl: sean2077.pages.dev # 不要包含 https:// 或尾部斜杠
 ```
 
 ### 环境变量（Git 部署方式需要）
@@ -145,15 +140,14 @@ Sitemap: https://your-site.pages.dev/sitemap.xml
 
 ### 3. 配置验证码
 
-在 `quartz.config.ts` 中配置你的验证码：
+在 `quartz.config.yaml` 中配置你的验证码：
 
-```typescript
-configuration: {
-  // ...
-  googleSiteVerification: "你的验证码",  // fork 后请替换为你自己的
-  // ...
-}
+```yaml
+configuration:
+  googleSiteVerification: "你的验证码" # fork 后请替换为你自己的
 ```
+
+本地迁移分支已通过 `plugins/local/head-meta` 将该配置写入页面 `<head>`。
 
 部署网站后，回到 Search Console 点击验证。
 

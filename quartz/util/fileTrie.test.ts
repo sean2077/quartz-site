@@ -108,7 +108,7 @@ describe("FileTrie", () => {
       assert.strictEqual(trie.children[1].children[0].children[0].children.length, 0)
     })
 
-    test("last-insert-wins on folder-note collision", () => {
+    test("last-insert-wins on folder-note collision (matches emitter semantics)", () => {
       const first = {
         title: "First Folder Note",
         slug: "foo/index",

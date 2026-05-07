@@ -1,0 +1,18 @@
+{
+  "name": "leetcode-links",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "quartz": {
+    "name": "leetcode-links",
+    "displayName": "LeetCode Links",
+    "description": "Converts Obsidian LeetCode wikilinks to external leetcode.com links before OFM runs.",
+    "version": "1.0.0",
+    "category": "transformer",
+    "quartzVersion": ">=5.0.0",
+    "defaultOrder": 25,
+    "defaultEnabled": true
+  }
+}

@@ -9,10 +9,15 @@ tsconfig.tsbuildinfo
 private/
 .replit
 replit.nix
+.quartz/
+.omx/
+quartz/cli/tui/dist/
+
 # User-specific Obsidian vault files
 obsidian-vault
 content/
 .wrangler/
+
 # AI tools
 .claude/
 .serena/

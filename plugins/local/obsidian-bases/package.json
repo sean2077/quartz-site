@@ -1,0 +1,21 @@
+{
+  "name": "obsidian-bases",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "quartz": {
+    "name": "obsidian-bases",
+    "displayName": "Obsidian Bases",
+    "description": "Renders Obsidian Bases code fences through a render-time tree transform.",
+    "version": "1.0.0",
+    "category": [
+      "transformer",
+      "pageType"
+    ],
+    "quartzVersion": ">=5.0.0",
+    "defaultOrder": 90,
+    "defaultEnabled": true
+  }
+}

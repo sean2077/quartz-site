@@ -2,16 +2,15 @@ import { FullSlug, isFolderPath, resolveRelative } from "../util/path"
 import { QuartzPluginData } from "../plugins/vfile"
 import { Date, getDate } from "./Date"
 import { QuartzComponent, QuartzComponentProps } from "./types"
-import { GlobalConfiguration } from "../cfg"
 
 export type SortFn = (f1: QuartzPluginData, f2: QuartzPluginData) => number
 
-export function byDateAndAlphabetical(cfg: GlobalConfiguration): SortFn {
+export function byDateAndAlphabetical(): SortFn {
   return (f1, f2) => {
     // Sort by date/alphabetical
     if (f1.dates && f2.dates) {
       // sort descending
-      return getDate(cfg, f2)!.getTime() - getDate(cfg, f1)!.getTime()
+      return getDate(f2)!.getTime() - getDate(f1)!.getTime()
     } else if (f1.dates && !f2.dates) {
       // prioritize files with dates
       return -1
@@ -26,7 +25,7 @@ export function byDateAndAlphabetical(cfg: GlobalConfiguration): SortFn {
   }
 }
 
-export function byDateAndAlphabeticalFolderFirst(cfg: GlobalConfiguration): SortFn {
+export function byDateAndAlphabeticalFolderFirst(): SortFn {
   return (f1, f2) => {
     // Sort folders first
     const f1IsFolder = isFolderPath(f1.slug ?? "")
@@ -37,7 +36,7 @@ export function byDateAndAlphabeticalFolderFirst(cfg: GlobalConfiguration): Sort
     // If both are folders or both are files, sort by date/alphabetical
     if (f1.dates && f2.dates) {
       // sort descending
-      return getDate(cfg, f2)!.getTime() - getDate(cfg, f1)!.getTime()
+      return getDate(f2)!.getTime() - getDate(f1)!.getTime()
     } else if (f1.dates && !f2.dates) {
       // prioritize files with dates
       return -1
@@ -52,32 +51,13 @@ export function byDateAndAlphabeticalFolderFirst(cfg: GlobalConfiguration): Sort
   }
 }
 
-/**
- * Sort by natural order (numeric-aware) with folders first
- * This handles titles like "01.栈", "02.队列", "10.ST 表" correctly
- */
-export function byNaturalOrderFolderFirst(): SortFn {
-  return (f1, f2) => {
-    // Sort folders first
-    const f1IsFolder = isFolderPath(f1.slug ?? "")
-    const f2IsFolder = isFolderPath(f2.slug ?? "")
-    if (f1IsFolder && !f2IsFolder) return -1
-    if (!f1IsFolder && f2IsFolder) return 1
-
-    // Sort by title using natural order (numeric-aware)
-    const f1Title = f1.frontmatter?.title ?? ""
-    const f2Title = f2.frontmatter?.title ?? ""
-    return f1Title.localeCompare(f2Title, undefined, { numeric: true, sensitivity: "base" })
-  }
-}
-
 type Props = {
   limit?: number
   sort?: SortFn
 } & QuartzComponentProps
 
 export const PageList: QuartzComponent = ({ cfg, fileData, allFiles, limit, sort }: Props) => {
-  const sorter = sort ?? byDateAndAlphabeticalFolderFirst(cfg)
+  const sorter = sort ?? byDateAndAlphabeticalFolderFirst()
   let list = allFiles.sort(sorter)
   if (limit) {
     list = list.slice(0, limit)
@@ -92,12 +72,13 @@ export const PageList: QuartzComponent = ({ cfg, fileData, allFiles, limit, sort
         return (
           <li class="section-li">
             <div class="section">
-              <p class="meta">
-                {page.dates && <Date date={getDate(cfg, page)!} locale={cfg.locale} />}
-              </p>
+              <p class="meta">{page.dates && <Date date={getDate(page)!} locale={cfg.locale} />}</p>
               <div class="desc">
                 <h3>
-                  <a href={resolveRelative(fileData.slug!, page.slug!)} class="internal">
+                  <a
+                    href={resolveRelative(fileData.slug!, page.slug!)}
+                    class="internal internal-link"
+                  >
                     {title}
                   </a>
                 </h3>

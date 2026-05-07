@@ -8,7 +8,7 @@ import { styleText } from "util"
 import { parseMarkdown } from "./processors/parse"
 import { filterContent } from "./processors/filter"
 import { emitContent } from "./processors/emit"
-import cfg from "../quartz.config"
+import cfg from "../quartz"
 import { FilePath, joinSegments, slugifyFilePath } from "./util/path"
 import { detectSlugCollisions, formatCollisionWarning } from "./util/slugCollisions"
 import chokidar from "chokidar"
@@ -57,19 +57,21 @@ async function buildQuartz(argv: Argv, mut: Mutex, clientRefresh: () => void) {
     allSlugs: [],
     allFiles: [],
     incremental: false,
+    virtualPages: [],
   }
 
   const perf = new PerfTimer()
   const output = argv.output
 
   const pluginCount = Object.values(cfg.plugins).flat().length
-  const pluginNames = (key: "transformers" | "filters" | "emitters") =>
-    cfg.plugins[key].map((plugin) => plugin.name)
+  const pluginNames = (key: "transformers" | "filters" | "emitters" | "pageTypes") =>
+    (cfg.plugins[key] ?? []).map((plugin) => plugin.name)
   if (argv.verbose) {
     console.log(`Loaded ${pluginCount} plugins`)
     console.log(`  Transformers: ${pluginNames("transformers").join(", ")}`)
     console.log(`  Filters: ${pluginNames("filters").join(", ")}`)
     console.log(`  Emitters: ${pluginNames("emitters").join(", ")}`)
+    console.log(`  PageTypes: ${pluginNames("pageTypes").join(", ")}`)
   }
 
   const release = await mut.acquire()
@@ -263,6 +265,7 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
   // update allFiles and then allSlugs with the consistent view of content map
   ctx.allFiles = Array.from(contentMap.keys())
   ctx.allSlugs = ctx.allFiles.map((fp) => slugifyFilePath(fp as FilePath))
+
   const markdownContent = Array.from(contentMap.values())
     .filter((file) => file.type === "markdown")
     .map((file) => file.content)
@@ -270,10 +273,40 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
   let processedFiles = filterContent(ctx, markdownContent)
 
   let emittedFiles = 0
+
+  // Phase 1: Run PageTypeDispatcher first so it populates ctx.virtualPages
+  const dispatcher = cfg.plugins.emitters.find((e) => e.name === "PageTypeDispatcher")
+  if (dispatcher) {
+    ctx.virtualPages = []
+    const emitFn = dispatcher.partialEmit ?? dispatcher.emit
+    const emitted = await emitFn(ctx, processedFiles, staticResources, changeEvents)
+    if (emitted !== null) {
+      if (Symbol.asyncIterator in emitted) {
+        for await (const file of emitted) {
+          emittedFiles++
+          if (ctx.argv.verbose) {
+            console.log(`[emit:${dispatcher.name}] ${file}`)
+          }
+        }
+      } else {
+        emittedFiles += emitted.length
+        if (ctx.argv.verbose) {
+          for (const file of emitted) {
+            console.log(`[emit:${dispatcher.name}] ${file}`)
+          }
+        }
+      }
+    }
+  }
+
+  // Phase 2: Run all other emitters with content extended by virtual pages
+  const contentWithVirtual =
+    ctx.virtualPages.length > 0 ? [...processedFiles, ...ctx.virtualPages] : processedFiles
   for (const emitter of cfg.plugins.emitters) {
+    if (emitter.name === "PageTypeDispatcher") continue
     // Try to use partialEmit if available, otherwise assume the output is static
     const emitFn = emitter.partialEmit ?? emitter.emit
-    const emitted = await emitFn(ctx, processedFiles, staticResources, changeEvents)
+    const emitted = await emitFn(ctx, contentWithVirtual, staticResources, changeEvents)
     if (emitted === null) {
       continue
     }

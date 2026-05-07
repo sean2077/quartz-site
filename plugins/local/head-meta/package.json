@@ -1,0 +1,18 @@
+{
+  "name": "head-meta",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "quartz": {
+    "name": "head-meta",
+    "displayName": "Head Meta",
+    "description": "Adds local site verification head metadata.",
+    "version": "1.0.0",
+    "category": "transformer",
+    "quartzVersion": ">=5.0.0",
+    "defaultOrder": 5,
+    "defaultEnabled": true
+  }
+}
