@@ -1,0 +1,289 @@
+# yaml-language-server: $schema=./quartz/plugins/quartz-plugins.schema.json
+configuration:
+  pageTitle: Sean's Blog
+  pageTitleSuffix: ""
+  enableSPA: true
+  enablePopovers: true
+  analytics:
+    provider: plausible
+  googleSiteVerification: cVJjK0bzRs-HKM4xz3cY6OMNG_ZaatotiR95JwYt3yw
+  locale: zh-CN
+  baseUrl: sean2077.pages.dev
+  ignorePatterns:
+    - private
+    - templates
+    - .obsidian
+    - .git
+    - .ref
+    - .tools
+    - .vscode
+    - _obscripts
+    - 0*/**
+    - 2*/**
+    - 9Z 系统区/背景/**
+    - 9Z 系统区/模板/**
+    - 9Z 系统区/示例/**
+    - 9Z 系统区/*.md
+    - 1Y LeetCode/**
+  theme:
+    fontOrigin: googleFonts
+    cdnCaching: true
+    typography:
+      header:
+        name: LXGW WenKai
+        weights: [400, 700]
+      body:
+        name: LXGW WenKai
+        weights: [300, 400, 500, 700]
+        includeItalic: false
+      code: Fira Code
+    colors:
+      lightMode:
+        light: "#faf6ef"
+        lightgray: "#e8e4dc"
+        gray: "#8a857c"
+        darkgray: "#3a3632"
+        dark: "#1a1816"
+        secondary: "#2d5a6b"
+        tertiary: "#4d8577"
+        highlight: rgba(143, 159, 169, 0.12)
+        textHighlight: "#fff23688"
+      darkMode:
+        light: "#232328"
+        lightgray: "#393639"
+        gray: "#7a7a7a"
+        darkgray: "#e8e8e8"
+        dark: "#f5f5f5"
+        secondary: "#8eadc2"
+        tertiary: "#9cc4b5"
+        highlight: rgba(143, 159, 169, 0.15)
+        textHighlight: "#b3aa0288"
+plugins:
+  - source: ./plugins/local/head-meta
+    enabled: true
+    order: 5
+  - source: github:quartz-community/created-modified-date
+    enabled: true
+    options:
+      defaultDateType: modified
+      priority:
+        - frontmatter
+        - git
+        - filesystem
+    order: 10
+  - source: github:quartz-community/syntax-highlighting
+    enabled: true
+    options:
+      theme:
+        light: github-light
+        dark: github-dark
+      keepBackground: false
+    order: 20
+  - source: ./plugins/local/leetcode-links
+    enabled: true
+    order: 25
+  - source: github:quartz-community/obsidian-flavored-markdown
+    enabled: true
+    options:
+      enableInHtmlEmbed: false
+      enableCheckbox: true
+    order: 30
+  - source: github:quartz-community/github-flavored-markdown
+    enabled: true
+    order: 40
+  - source: github:quartz-community/table-of-contents
+    enabled: true
+    order: 50
+  - source: github:quartz-community/crawl-links
+    enabled: true
+    options:
+      markdownLinkResolution: shortest
+    order: 60
+  - source: github:quartz-community/description
+    enabled: true
+    order: 70
+  - source: github:quartz-community/latex
+    enabled: true
+    options:
+      renderEngine: katex
+      katexOptions:
+        strict: false
+    order: 80
+  - source: ./plugins/local/obsidian-bases
+    enabled: true
+    order: 90
+  - source: ./plugins/local/collect-assets
+    enabled: true
+    order: 95
+  - source: ./plugins/local/folder-notes
+    enabled: true
+    order: 96
+  - source: github:quartz-community/citations
+    enabled: false
+    order: 100
+  - source: github:quartz-community/hard-line-breaks
+    enabled: false
+    order: 101
+  - source: github:quartz-community/ox-hugo
+    enabled: false
+    order: 102
+  - source: github:quartz-community/roam
+    enabled: false
+    order: 103
+  - source: github:quartz-community/remove-draft
+    enabled: true
+  - source: github:quartz-community/explicit-publish
+    enabled: true
+  - source: github:quartz-community/alias-redirects
+    enabled: true
+  - source: github:quartz-community/content-index
+    enabled: true
+    options:
+      enableSiteMap: true
+      enableRSS: true
+      rssLimit: 9999
+  - source: github:quartz-community/favicon
+    enabled: true
+  - source: github:quartz-community/og-image
+    enabled: false
+  - source: github:quartz-community/cname
+    enabled: false
+  - source: github:quartz-community/canvas-page
+    enabled: false
+  - source: github:quartz-community/content-page
+    enabled: true
+  - source: github:quartz-community/folder-page
+    enabled: true
+  - source: github:quartz-community/tag-page
+    enabled: true
+  - source: ./plugins/local/on-demand-assets
+    enabled: true
+  - source: github:quartz-community/explorer
+    enabled: true
+    layout:
+      position: left
+      priority: 50
+  - source: github:quartz-community/graph
+    enabled: true
+    layout:
+      position: right
+      priority: 10
+  - source: github:quartz-community/search
+    enabled: true
+    layout:
+      position: left
+      priority: 20
+      group: toolbar
+      groupOptions:
+        grow: true
+  - source: github:quartz-community/backlinks
+    enabled: true
+    layout:
+      position: right
+      priority: 30
+  - source: github:quartz-community/article-title
+    enabled: true
+    layout:
+      position: beforeBody
+      priority: 10
+  - source: github:quartz-community/content-meta
+    enabled: true
+    layout:
+      position: beforeBody
+      priority: 20
+  - source: github:quartz-community/tag-list
+    enabled: true
+    layout:
+      position: beforeBody
+      priority: 30
+  - source: github:quartz-community/page-title
+    enabled: true
+    layout:
+      position: left
+      priority: 10
+  - source: github:quartz-community/darkmode
+    enabled: true
+    layout:
+      position: left
+      priority: 30
+      group: toolbar
+  - source: github:quartz-community/reader-mode
+    enabled: true
+    layout:
+      position: left
+      priority: 35
+      group: toolbar
+  - source: github:quartz-community/breadcrumbs
+    enabled: true
+    layout:
+      position: beforeBody
+      priority: 5
+      condition: not-index
+  - source: ./plugins/local/dynamic-background
+    enabled: true
+    layout:
+      position: afterBody
+      priority: 1
+  - source: ./plugins/local/mobile-toc
+    enabled: true
+    layout:
+      position: afterBody
+      priority: 2
+  - source: github:quartz-community/comments
+    enabled: false
+    options:
+      provider: giscus
+      options: {}
+    layout:
+      position: afterBody
+      priority: 10
+  - source: github:quartz-community/footer
+    enabled: true
+    options:
+      links:
+        GitHub: https://github.com/sean2077/
+        Email: mailto:seanzhang.dev@gmail.com
+        RSS: /index.xml
+  - source: github:quartz-community/recent-notes
+    enabled: false
+  - source: github:quartz-community/spacer
+    enabled: true
+    options: {}
+    order: 25
+    layout:
+      position: left
+      priority: 25
+      display: mobile-only
+  - source: github:quartz-community/bases-page
+    enabled: false
+  - source: github:quartz-community/note-properties
+    enabled: true
+    options:
+      includeAll: false
+      includedProperties:
+        - description
+        - tags
+        - aliases
+      excludedProperties: []
+      hidePropertiesView: true
+      delimiters: ---
+      language: yaml
+    order: 5
+  - source: github:quartz-community/unlisted-pages
+    enabled: false
+  - source: github:quartz-community/encrypted-pages
+    enabled: false
+layout:
+  groups:
+    toolbar:
+      priority: 20
+      direction: row
+      gap: 1rem
+  byPageType:
+    404:
+      template: minimal
+      positions:
+        left: []
+        right: []
+        beforeBody: []
+        afterBody: []

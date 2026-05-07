@@ -1,0 +1,28 @@
+{
+  "name": "dynamic-background",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./components": "./components/index.ts"
+  },
+  "quartz": {
+    "name": "dynamic-background",
+    "displayName": "Dynamic Background",
+    "description": "Adds the local time-based glass background component.",
+    "version": "1.0.0",
+    "category": "component",
+    "quartzVersion": ">=5.0.0",
+    "components": {
+      "DynamicBackground": {
+        "name": "DynamicBackground",
+        "displayName": "Dynamic Background",
+        "description": "Time-based full-page background.",
+        "version": "1.0.0",
+        "defaultPosition": "afterBody",
+        "defaultPriority": 1
+      }
+    },
+    "defaultEnabled": true
+  }
+}

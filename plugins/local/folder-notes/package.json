@@ -1,0 +1,18 @@
+{
+  "name": "folder-notes",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "quartz": {
+    "name": "folder-notes",
+    "displayName": "Folder Notes",
+    "description": "Marks Obsidian folder/folder.md notes for folder landing-page handling.",
+    "version": "1.0.0",
+    "category": "transformer",
+    "quartzVersion": ">=5.0.0",
+    "defaultOrder": 96,
+    "defaultEnabled": true
+  }
+}

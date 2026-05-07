@@ -44,6 +44,10 @@ export const Assets: QuartzEmitterPlugin = () => {
   return {
     name: "Assets",
     async *emit(ctx) {
+      if (ctx.cfg.plugins.emitters.some((emitter) => emitter.name === "OnDemandAssets")) {
+        return
+      }
+
       const excludeExtensions = getPageTypeExtensions(ctx)
       const fps = await filesToCopy(ctx.argv, ctx.cfg, excludeExtensions)
       for (const fp of fps) {
@@ -51,6 +55,10 @@ export const Assets: QuartzEmitterPlugin = () => {
       }
     },
     async *partialEmit(ctx, _content, _resources, changeEvents) {
+      if (ctx.cfg.plugins.emitters.some((emitter) => emitter.name === "OnDemandAssets")) {
+        return
+      }
+
       const excludeExtensions = getPageTypeExtensions(ctx)
       for (const changeEvent of changeEvents) {
         const ext = path.extname(changeEvent.path)

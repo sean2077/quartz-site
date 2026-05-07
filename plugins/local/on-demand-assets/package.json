@@ -1,0 +1,17 @@
+{
+  "name": "on-demand-assets",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "quartz": {
+    "name": "on-demand-assets",
+    "displayName": "On Demand Assets",
+    "description": "Copies only assets referenced by published content.",
+    "version": "1.0.0",
+    "category": "emitter",
+    "quartzVersion": ">=5.0.0",
+    "defaultEnabled": true
+  }
+}

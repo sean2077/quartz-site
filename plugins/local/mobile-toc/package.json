@@ -1,0 +1,28 @@
+{
+  "name": "mobile-toc",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./components": "./components/index.ts"
+  },
+  "quartz": {
+    "name": "mobile-toc",
+    "displayName": "Mobile TOC",
+    "description": "Adds a mobile table-of-contents bottom sheet and back-to-top button.",
+    "version": "1.0.0",
+    "category": "component",
+    "quartzVersion": ">=5.0.0",
+    "components": {
+      "MobileToc": {
+        "name": "MobileToc",
+        "displayName": "Mobile TOC",
+        "description": "Mobile table of contents.",
+        "version": "1.0.0",
+        "defaultPosition": "afterBody",
+        "defaultPriority": 2
+      }
+    },
+    "defaultEnabled": true
+  }
+}
