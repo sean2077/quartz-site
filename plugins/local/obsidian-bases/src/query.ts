@@ -11,12 +11,12 @@ export function parseFilter(
   currentFile?: QuartzPluginData,
 ): FilterFn {
   // Handle nested logical structures
-  if (typeof expression === "object") {
-    if ("and" in expression) {
+  if (expression && typeof expression === "object") {
+    if ("and" in expression && Array.isArray(expression.and)) {
       const subFilters = expression.and.map((e) => parseFilter(e, currentFile))
       return (file, allFiles, cf) => subFilters.every((fn) => fn(file, allFiles, cf ?? currentFile))
     }
-    if ("or" in expression) {
+    if ("or" in expression && Array.isArray(expression.or)) {
       const subFilters = expression.or.map((e) => parseFilter(e, currentFile))
       return (file, allFiles, cf) => subFilters.some((fn) => fn(file, allFiles, cf ?? currentFile))
     }
@@ -86,6 +86,37 @@ function matchesFileRef(value: unknown, file?: QuartzPluginData): boolean {
   return fileRefCandidates(file).has(normalizeFileRef(value))
 }
 
+function normalizeTag(tag: unknown): string {
+  return String(tag).trim().replace(/^#/, "").toLowerCase()
+}
+
+function getTags(file: QuartzPluginData): string[] {
+  const tags = file.frontmatter?.tags
+  if (Array.isArray(tags)) return tags.map(normalizeTag).filter(Boolean)
+  if (typeof tags === "string") {
+    return tags
+      .split(/[,\s]+/)
+      .map(normalizeTag)
+      .filter(Boolean)
+  }
+  return []
+}
+
+function hasTag(file: QuartzPluginData, tag: string): boolean {
+  const normalizedTag = normalizeTag(tag)
+  return getTags(file).some((candidate) => candidate === normalizedTag)
+}
+
+function isInFolder(slug: string, folder: string): boolean {
+  const normalizedFolder = folder.replace(/^\/+|\/+$/g, "")
+  if (!normalizedFolder) return false
+  return (
+    slug === normalizedFolder ||
+    slug.startsWith(`${normalizedFolder}/`) ||
+    slug.includes(`/${normalizedFolder}/`)
+  )
+}
+
 /**
  * Parse a string filter expression like "file.hasTag('book')" or "status == 'done'"
  * @param expr - The filter expression string
@@ -132,30 +163,21 @@ function parseFilterString(expr: string, currentFile?: QuartzPluginData): Filter
   const hasTagMatch = trimmed.match(/^file\.hasTag\s*\(\s*["']([^"']+)["']\s*\)$/)
   if (hasTagMatch) {
     const tag = hasTagMatch[1]
-    return (file) => {
-      const tags = file.frontmatter?.tags ?? []
-      return tags.some((t) => t.toLowerCase() === tag.toLowerCase())
-    }
+    return (file) => hasTag(file, tag)
   }
 
   // file.tags.contains("tag") - Obsidian Bases native syntax
   const tagsContainsMatch = trimmed.match(/^file\.tags\.contains\s*\(\s*["']([^"']+)["']\s*\)$/)
   if (tagsContainsMatch) {
     const tag = tagsContainsMatch[1]
-    return (file) => {
-      const tags = file.frontmatter?.tags ?? []
-      return tags.some((t) => t.toLowerCase() === tag.toLowerCase())
-    }
+    return (file) => hasTag(file, tag)
   }
 
   // file.inFolder("path")
   const inFolderMatch = trimmed.match(/^file\.inFolder\s*\(\s*["']([^"']+)["']\s*\)$/)
   if (inFolderMatch) {
     const folder = inFolderMatch[1]
-    return (file) => {
-      const slug = file.slug ?? ""
-      return slug.startsWith(folder) || slug.includes(`/${folder}/`)
-    }
+    return (file) => isInFolder(file.slug ?? "", folder)
   }
 
   // file.name.contains("str") / file.name.startsWith("str") / file.name.endsWith("str")
@@ -285,10 +307,7 @@ function parseFilterString(expr: string, currentFile?: QuartzPluginData): Filter
   )
   if (taggedWithMatch) {
     const tag = taggedWithMatch[1]
-    return (file) => {
-      const tags = file.frontmatter?.tags ?? []
-      return tags.some((t) => t.toLowerCase() === tag.toLowerCase())
-    }
+    return (file) => hasTag(file, tag)
   }
 
   // linksTo(file.file, "target") or linksTo(file.file, this.file.path)
@@ -307,10 +326,7 @@ function parseFilterString(expr: string, currentFile?: QuartzPluginData): Filter
   )
   if (inFolderFuncMatch) {
     const folder = inFolderFuncMatch[1]
-    return (file) => {
-      const slug = file.slug ?? ""
-      return slug.startsWith(folder) || slug.includes(`/${folder}/`)
-    }
+    return (file) => isInFolder(file.slug ?? "", folder)
   }
 
   // Simple property check (truthy)

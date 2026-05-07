@@ -75,4 +75,24 @@ describe("ObsidianBases render transform", () => {
     assert.equal(filter(matchingResource, [], currentFile), true)
     assert.equal(filter(otherResource, [], currentFile), false)
   })
+
+  test("handles string tags and does not match partial folder prefixes", () => {
+    const hasTag = parseFilter('file.hasTag("book")')
+    const inFolder = parseFilter('file.inFolder("foo")')
+
+    assert.equal(hasTag({ slug: "note", frontmatter: { tags: "book" } }, [], undefined), true)
+    assert.equal(
+      hasTag({ slug: "note", frontmatter: { tags: "#book, draft" } }, [], undefined),
+      true,
+    )
+    assert.equal(inFolder({ slug: "foo/note" }, [], undefined), true)
+    assert.equal(inFolder({ slug: "root/foo/note" }, [], undefined), true)
+    assert.equal(inFolder({ slug: "foobar/note" }, [], undefined), false)
+  })
+
+  test("treats null filter expressions as accept-all", () => {
+    const filter = parseFilter(null as never)
+
+    assert.equal(filter({ slug: "note" }, [], undefined), true)
+  })
 })

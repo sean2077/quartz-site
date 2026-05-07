@@ -678,6 +678,8 @@ iframe.pdf {
   width: 0;
   height: 3px;
   background: var(--secondary);
-  transition: width 0.2s ease;
+  transition:
+    width 0.2s ease,
+    opacity 0.2s ease;
   z-index: 9999;
 }

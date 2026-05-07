@@ -43,17 +43,36 @@ function notifyNav(url: FullSlug) {
 const cleanupFns: Set<(...args: any[]) => void> = new Set()
 window.addCleanup = (fn) => cleanupFns.add(fn)
 
+let loadingBar: HTMLElement | null = null
+let loadingBarRemovalTimer: number | undefined
+
 function startLoading() {
-  const loadingBar = document.createElement("div")
-  loadingBar.className = "navigation-progress"
-  loadingBar.style.width = "0"
-  if (!document.body.contains(loadingBar)) {
+  loadingBar ??= document.querySelector(".navigation-progress")
+  if (!loadingBar) {
+    loadingBar = document.createElement("div")
+    loadingBar.className = "navigation-progress"
     document.body.appendChild(loadingBar)
   }
 
-  setTimeout(() => {
-    loadingBar.style.width = "80%"
-  }, 100)
+  window.clearTimeout(loadingBarRemovalTimer)
+  loadingBar.style.opacity = "1"
+  loadingBar.style.width = "0"
+  void loadingBar.offsetWidth
+  loadingBar.style.width = "80%"
+}
+
+function finishLoading() {
+  if (!loadingBar) return
+
+  loadingBar.style.width = "100%"
+  loadingBar.style.opacity = "0"
+  const currentBar = loadingBar
+  loadingBarRemovalTimer = window.setTimeout(() => {
+    currentBar.remove()
+    if (loadingBar === currentBar) {
+      loadingBar = null
+    }
+  }, 250)
 }
 
 let isNavigating = false
@@ -139,6 +158,7 @@ async function navigate(url: URL, isBack: boolean = false) {
     console.error(e)
     window.location.assign(url)
   } finally {
+    finishLoading()
     isNavigating = false
   }
 }

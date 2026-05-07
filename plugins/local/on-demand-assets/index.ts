@@ -119,6 +119,14 @@ async function copyFile(argv: Argv, fp: FilePath): Promise<FilePath> {
   return dest
 }
 
+async function removeCopiedFile(argv: Argv, fp: FilePath): Promise<void> {
+  const name = slugifyFilePath(fp)
+  const dest = joinSegments(argv.output, name) as FilePath
+  try {
+    await fs.promises.unlink(dest)
+  } catch {}
+}
+
 export const OnDemandAssets: QuartzEmitterPlugin<Partial<Options>> = (userOpts) => {
   const opts = { ...defaultOptions, ...userOpts }
 
@@ -157,26 +165,95 @@ export const OnDemandAssets: QuartzEmitterPlugin<Partial<Options>> = (userOpts) 
     },
     async *partialEmit(ctx, content, _resources, changeEvents) {
       const referencedAssets = collectReferencedAssets(content)
+      let assetMap: Map<string, FilePath> | undefined
+      const copiedAssets = new Set<FilePath>()
+      let retainedAssets: Set<FilePath> | undefined
+
+      const getAssetMap = async () => (assetMap ??= await getAllAssets(ctx.argv, ctx.cfg))
+
+      const resolveReferencedAssets = async (refs: Iterable<string>): Promise<Set<FilePath>> => {
+        const map = await getAssetMap()
+        const resolvedAssets = new Set<FilePath>()
+
+        for (const ref of refs) {
+          const resolved = resolveAsset(ref, map)
+          if (resolved) {
+            resolvedAssets.add(resolved)
+          }
+        }
+
+        return resolvedAssets
+      }
+
+      const getRetainedAssets = async (): Promise<Set<FilePath>> => {
+        if (retainedAssets) return retainedAssets
+
+        retainedAssets = await resolveReferencedAssets(referencedAssets)
+        for (const pattern of opts.alwaysInclude ?? []) {
+          const files = await glob(
+            pattern,
+            ctx.argv.directory,
+            ctx.cfg.configuration.ignorePatterns,
+          )
+          for (const fp of files) {
+            retainedAssets.add(fp)
+          }
+        }
+
+        return retainedAssets
+      }
+
+      const copyReferencedAssets = async function* (refs: Iterable<string>) {
+        const resolvedAssets = await resolveReferencedAssets(refs)
+        for (const fp of resolvedAssets) {
+          if (!copiedAssets.has(fp)) {
+            copiedAssets.add(fp)
+            yield copyFile(ctx.argv, fp)
+          }
+        }
+      }
+
+      const removeUnreferencedAssets = async () => {
+        const map = await getAssetMap()
+        const retained = await getRetainedAssets()
+        for (const fp of new Set(map.values())) {
+          if (!retained.has(fp)) {
+            await removeCopiedFile(ctx.argv, fp)
+          }
+        }
+      }
+
+      let sawMarkdownChange = false
 
       for (const changeEvent of changeEvents) {
         const ext = path.extname(changeEvent.path)
-        if (ext === ".md") continue
+        if (ext === ".md") {
+          sawMarkdownChange = true
+          if (changeEvent.type === "add" || changeEvent.type === "change") {
+            const changedMarkdownAssets = (changeEvent.file?.data.assets ?? []) as string[]
+            yield* copyReferencedAssets(
+              changedMarkdownAssets.length > 0 ? changedMarkdownAssets : referencedAssets,
+            )
+          }
+          continue
+        }
 
         if (changeEvent.type === "add" || changeEvent.type === "change") {
-          const isReferenced =
-            referencedAssets.has(changeEvent.path) ||
-            referencedAssets.has(path.basename(changeEvent.path))
+          const retained = await getRetainedAssets()
+          const isRetained = retained.has(changeEvent.path)
 
-          if (isReferenced) {
+          if (isRetained) {
             yield copyFile(ctx.argv, changeEvent.path)
+          } else {
+            await removeCopiedFile(ctx.argv, changeEvent.path)
           }
         } else if (changeEvent.type === "delete") {
-          const name = slugifyFilePath(changeEvent.path)
-          const dest = joinSegments(ctx.argv.output, name) as FilePath
-          try {
-            await fs.promises.unlink(dest)
-          } catch {}
+          await removeCopiedFile(ctx.argv, changeEvent.path)
         }
+      }
+
+      if (sawMarkdownChange) {
+        await removeUnreferencedAssets()
       }
     },
   }
