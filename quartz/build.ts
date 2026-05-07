@@ -10,6 +10,7 @@ import { filterContent } from "./processors/filter"
 import { emitContent } from "./processors/emit"
 import cfg from "../quartz.config"
 import { FilePath, joinSegments, slugifyFilePath } from "./util/path"
+import { detectSlugCollisions, formatCollisionWarning } from "./util/slugCollisions"
 import chokidar from "chokidar"
 import { ProcessedContent } from "./plugins/vfile"
 import { Argv, BuildCtx } from "./util/ctx"
@@ -21,6 +22,12 @@ import { getStaticResourcesFromPlugins } from "./plugins"
 import { randomIdNonSecure } from "./util/random"
 import { ChangeEvent } from "./plugins/types"
 import { minimatch } from "minimatch"
+
+function reportSlugCollisions(content: ProcessedContent[]): void {
+  const collisions = detectSlugCollisions(content)
+  if (collisions.length === 0) return
+  console.warn(styleText("yellow", formatCollisionWarning(collisions)))
+}
 
 type ContentMap = Map<
   FilePath,
@@ -82,6 +89,7 @@ async function buildQuartz(argv: Argv, mut: Mutex, clientRefresh: () => void) {
   ctx.allSlugs = allFiles.map((fp) => slugifyFilePath(fp as FilePath))
 
   const parsedFiles = await parseMarkdown(ctx, filePaths)
+  reportSlugCollisions(parsedFiles)
   const filteredContent = filterContent(ctx, parsedFiles)
 
   await emitContent(ctx, filteredContent)
@@ -255,12 +263,11 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
   // update allFiles and then allSlugs with the consistent view of content map
   ctx.allFiles = Array.from(contentMap.keys())
   ctx.allSlugs = ctx.allFiles.map((fp) => slugifyFilePath(fp as FilePath))
-  let processedFiles = filterContent(
-    ctx,
-    Array.from(contentMap.values())
-      .filter((file) => file.type === "markdown")
-      .map((file) => file.content),
-  )
+  const markdownContent = Array.from(contentMap.values())
+    .filter((file) => file.type === "markdown")
+    .map((file) => file.content)
+  reportSlugCollisions(markdownContent)
+  let processedFiles = filterContent(ctx, markdownContent)
 
   let emittedFiles = 0
   for (const emitter of cfg.plugins.emitters) {

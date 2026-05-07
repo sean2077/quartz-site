@@ -101,9 +101,14 @@ export function transformInternalLink(link: string): RelativeURL {
   let fp = segments.filter((seg) => !isRelativeSegment(seg) && seg !== "").join("/")
 
   // manually add ext here as we want to not strip 'index' if it has an extension
-  const simpleSlug = simplifySlug(slugifyFilePath(fp as FilePath))
+  let simpleSlug = simplifySlug(slugifyFilePath(fp as FilePath))
+  let shouldUseFolderPath = folderPath
+  if (isFolderNoteSlug(simpleSlug)) {
+    simpleSlug = getFolderFromSlug(simpleSlug) as SimpleSlug
+    shouldUseFolderPath = true
+  }
   const joined = joinSegments(stripSlashes(prefix), stripSlashes(simpleSlug))
-  const trail = folderPath ? "/" : ""
+  const trail = shouldUseFolderPath ? "/" : ""
   const res = (_addRelativeToStart(joined) + trail + anchor) as RelativeURL
   return res
 }
@@ -236,7 +241,7 @@ function isFolderNoteSlug(slug: string): boolean {
   const fileName = parts[parts.length - 1]
   const folderName = parts[parts.length - 2]
 
-  return fileName === folderName
+  return fileName.length > 0 && fileName === folderName
 }
 
 /**

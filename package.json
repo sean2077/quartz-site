@@ -2,7 +2,7 @@
   "name": "@sean2077/quartz",
   "description": "🌱 publish your digital garden and notes as a website",
   "private": true,
-  "version": "4.5.2",
+  "version": "1.0.0",
   "type": "module",
   "author": "sean2077 <37324769+sean2077@users.noreply.github.com>",
   "license": "MIT",

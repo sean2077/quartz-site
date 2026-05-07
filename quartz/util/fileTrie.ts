@@ -69,7 +69,9 @@ export class FileTrieNode<T extends FileTrieData = ContentDetails> {
     if (path.length === 1) {
       // base case, we are at the end of the path
       if (segment === "index") {
-        this.data ??= file
+        // Last-insert-wins on collision. This matches the emitter's
+        // last-write-wins behavior so the trie agrees with the emitted page.
+        this.data = file
       } else {
         this.makeChild(path, file)
       }
