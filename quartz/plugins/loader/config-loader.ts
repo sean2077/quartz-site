@@ -437,13 +437,30 @@ export async function loadQuartzConfig(
         if (!factory) {
           console.warn(
             styleText("yellow", `⚠`) +
-              ` Plugin "${extractPluginName(entry.source)}" has no factory function for category "${expectedCategory}". Skipping.`,
+              ` Plugin "${extractPluginName(entry.source)}" has no factory function for category "${expectedCategory}". ` +
+              `Ensure your plugin exports a default function, a "plugin" named export, or a single exported function.`,
           )
           continue
         }
         const pluginOverrides = componentRegistry.getOptionOverrides(gitSpec.name)
         const options = { ...manifest?.defaultOptions, ...entry.options, ...pluginOverrides }
-        instances.push(factory(Object.keys(options).length > 0 ? options : undefined))
+        const instance = factory(Object.keys(options).length > 0 ? options : undefined)
+        if (!instance || typeof instance !== "object") {
+          console.warn(
+            styleText("yellow", `⚠`) +
+              ` Plugin "${extractPluginName(entry.source)}" factory did not return a valid plugin instance. Skipping.`,
+          )
+          continue
+        }
+        if (!validateCategory(instance, expectedCategory)) {
+          console.warn(
+            styleText("yellow", `⚠`) +
+              ` Plugin "${extractPluginName(entry.source)}" declares category "${expectedCategory}" ` +
+              `but its factory returned an instance missing the required methods. Skipping.`,
+          )
+          continue
+        }
+        instances.push(instance)
       } catch (err) {
         console.error(
           styleText("red", `✗`) +
@@ -488,47 +505,70 @@ export async function loadQuartzConfig(
 
 type ProcessingCategory = "transformer" | "filter" | "emitter" | "pageType"
 
-function matchesCategory(factory: Function, expected: ProcessingCategory): boolean {
-  try {
-    const instance = factory()
-    if (!instance || typeof instance !== "object") return false
-    switch (expected) {
-      case "pageType":
-        return "match" in instance && "body" in instance && "layout" in instance
-      case "emitter":
-        return "emit" in instance
-      case "filter":
-        return "shouldPublish" in instance
-      case "transformer":
-        return (
-          "textTransform" in instance || "markdownPlugins" in instance || "htmlPlugins" in instance
-        )
-    }
-  } catch {
-    return false
+/**
+ * Validate that a plugin instance has the required methods for its declared category.
+ * Called AFTER real instantiation — never used to probe/discover category.
+ */
+function validateCategory(
+  instance: Record<string, unknown>,
+  expected: ProcessingCategory,
+): boolean {
+  switch (expected) {
+    case "pageType":
+      return "match" in instance && "body" in instance && "layout" in instance
+    case "emitter":
+      return "emit" in instance
+    case "filter":
+      return "shouldPublish" in instance
+    case "transformer":
+      return (
+        "textTransform" in instance || "markdownPlugins" in instance || "htmlPlugins" in instance
+      )
   }
 }
 
+/**
+ * Find the factory function from a plugin module by export convention.
+ * Prefers `default` export, then `plugin` named export, then the sole exported function.
+ * For multi-export modules with an expectedCategory, probes candidate functions to find
+ * the one matching the category shape.
+ */
 function findFactory(
   module: Record<string, unknown>,
-  expectedCategory: ProcessingCategory,
+  expectedCategory?: ProcessingCategory,
 ): Function | null {
-  if (
-    typeof module.default === "function" &&
-    matchesCategory(module.default as Function, expectedCategory)
-  ) {
+  if (typeof module.default === "function") {
     return module.default as Function
   }
-  if (
-    typeof module.plugin === "function" &&
-    matchesCategory(module.plugin as Function, expectedCategory)
-  ) {
+  if (typeof module.plugin === "function") {
     return module.plugin as Function
   }
 
-  for (const [, value] of Object.entries(module)) {
-    if (typeof value === "function" && matchesCategory(value as Function, expectedCategory)) {
-      return value as Function
+  const exportedFunctions = Object.entries(module).filter(
+    ([key, value]) => typeof value === "function" && !key.startsWith("__"),
+  )
+
+  if (exportedFunctions.length === 1) {
+    return exportedFunctions[0][1] as Function
+  }
+
+  // Multiple exports: probe candidates to find the one matching the expected category.
+  // This is the only code path that calls factory() for discovery, and only when
+  // there is no default/plugin export and multiple functions are exported.
+  if (exportedFunctions.length > 1 && expectedCategory) {
+    for (const [, fn] of exportedFunctions) {
+      try {
+        const instance = (fn as Function)()
+        if (
+          instance &&
+          typeof instance === "object" &&
+          validateCategory(instance, expectedCategory)
+        ) {
+          return fn as Function
+        }
+      } catch {
+        // This export doesn't work without args — skip it
+      }
     }
   }
 
@@ -539,10 +579,20 @@ function detectCategoryFromModule(module: unknown): ProcessingCategory | null {
   if (!module || typeof module !== "object") return null
   const mod = module as Record<string, unknown>
 
-  if (typeof mod.default === "function") {
-    // Try to instantiate and inspect
+  // Prefer static category marker on the factory if available
+  const factory = findFactory(mod as Record<string, unknown>)
+  if (factory && "quartzCategory" in factory) {
+    const cat = (factory as Record<string, unknown>).quartzCategory
+    if (cat === "transformer" || cat === "filter" || cat === "emitter" || cat === "pageType") {
+      return cat
+    }
+  }
+
+  // Fallback: try instantiating with no args and inspect the result.
+  // This may fail for plugins that do I/O or require options during construction.
+  if (typeof factory === "function") {
     try {
-      const instance = (mod.default as Function)()
+      const instance = factory()
       if (instance && typeof instance === "object") {
         if ("match" in instance && "body" in instance && "layout" in instance) return "pageType"
         if ("emit" in instance) return "emitter"
@@ -555,7 +605,8 @@ function detectCategoryFromModule(module: unknown): ProcessingCategory | null {
           return "transformer"
       }
     } catch {
-      // Couldn't instantiate, skip detection
+      // Factory requires arguments or does I/O — cannot detect category by probing.
+      // Plugin should declare category in package.json quartz.category field.
     }
   }
 
