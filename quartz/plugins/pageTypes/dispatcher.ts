@@ -198,11 +198,15 @@ export const PageTypeDispatcher: QuartzEmitterPlugin<Partial<DispatcherOptions>>
         }
       }
 
-      // Render Body components to populate htmlAst for transclusion
-      populateVirtualPageHtmlAst(virtualEntries, ctx, allFiles, resources)
-
-      // Merge virtual page data into allFiles so renderPage can resolve transcludes
+      // Merge virtual page data into allFiles before populating htmlAst so that
+      // Body components rendered during populateVirtualPageHtmlAst can resolve
+      // cross-virtual-page embeds (e.g. a .base file embedded in a .canvas file).
+      // The vfile.data objects are shared by reference, so htmlAst set on earlier
+      // entries becomes visible to later entries in the same pass.
       const allFilesWithVirtual = [...allFiles, ...virtualEntries.map((ve) => ve.vfile.data)]
+
+      // Render Body components to populate htmlAst for transclusion
+      populateVirtualPageHtmlAst(virtualEntries, ctx, allFilesWithVirtual, resources)
 
       // Phase 2: Emit regular pages (with virtual page data available for transclusion)
       for (const [tree, file] of content) {
@@ -288,11 +292,10 @@ export const PageTypeDispatcher: QuartzEmitterPlugin<Partial<DispatcherOptions>>
         }
       }
 
-      // Render Body components to populate htmlAst for transclusion
-      populateVirtualPageHtmlAst(virtualEntries, ctx, allFiles, resources)
-
-      // Merge virtual page data into allFiles for transclude resolution
       const allFilesWithVirtual = [...allFiles, ...virtualEntries.map((ve) => ve.vfile.data)]
+
+      // Render Body components to populate htmlAst for transclusion
+      populateVirtualPageHtmlAst(virtualEntries, ctx, allFilesWithVirtual, resources)
 
       // Phase 2: Emit changed regular pages
       for (const [tree, file] of content) {
