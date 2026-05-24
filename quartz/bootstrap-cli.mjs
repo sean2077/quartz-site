@@ -278,7 +278,7 @@ yargs(hideBin(process.argv))
       await handlePluginStatus()
     },
   )
-  .showHelpOnFail(false)
+  .showHelpOnFail(true)
   .help()
   .strict()
   .demandCommand().argv

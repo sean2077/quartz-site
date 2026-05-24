@@ -165,30 +165,34 @@ async function startWatching(
   })
 
   const changes: ChangeEvent[] = []
+  let rebuildTimeout: ReturnType<typeof setTimeout> | null = null
+  const scheduleRebuild = () => {
+    if (rebuildTimeout) clearTimeout(rebuildTimeout)
+    rebuildTimeout = setTimeout(() => {
+      rebuildTimeout = null
+      rebuild(changes, clientRefresh, buildData).catch((err) => {
+        console.error(styleText("red", "Rebuild failed:"), err.message ?? err)
+      })
+    }, 100)
+  }
   watcher
     .on("add", (fp) => {
       fp = toPosixPath(fp)
       if (buildData.ignored(fp)) return
       changes.push({ path: fp as FilePath, type: "add" })
-      rebuild(changes, clientRefresh, buildData).catch((err) => {
-        console.error(styleText("red", "Rebuild failed:"), err.message ?? err)
-      })
+      scheduleRebuild()
     })
     .on("change", (fp) => {
       fp = toPosixPath(fp)
       if (buildData.ignored(fp)) return
       changes.push({ path: fp as FilePath, type: "change" })
-      rebuild(changes, clientRefresh, buildData).catch((err) => {
-        console.error(styleText("red", "Rebuild failed:"), err.message ?? err)
-      })
+      scheduleRebuild()
     })
     .on("unlink", (fp) => {
       fp = toPosixPath(fp)
       if (buildData.ignored(fp)) return
       changes.push({ path: fp as FilePath, type: "delete" })
-      rebuild(changes, clientRefresh, buildData).catch((err) => {
-        console.error(styleText("red", "Rebuild failed:"), err.message ?? err)
-      })
+      scheduleRebuild()
     })
 
   return async () => {
