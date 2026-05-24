@@ -130,7 +130,7 @@
     "graph": {
       "source": "github:quartz-community/graph",
       "resolved": "https://github.com/quartz-community/graph.git",
-      "commit": "57078cd5cec5b8f3de4ecab8233f827e3c9eeab1",
+      "commit": "09bf6b4e2d31646a63f30c3f20dc6b39ade1f943",
       "installedAt": "2026-04-27T19:44:28.387Z"
     },
     "hard-line-breaks": {
@@ -219,7 +219,7 @@
     "search": {
       "source": "github:quartz-community/search",
       "resolved": "https://github.com/quartz-community/search.git",
-      "commit": "eb8be82f19a0633a1d3c89fb006b089f6b62b473",
+      "commit": "b6d7e80865d9d487cea67d8966488f5f7e8452fe",
       "installedAt": "2026-04-27T19:44:29.038Z"
     },
     "spacer": {
