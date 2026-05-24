@@ -55,7 +55,7 @@ function collectComponents(
       layout.footer,
     ]
     for (const c of all) {
-      seen.add(c)
+      if (c) seen.add(c)
     }
   }
   return [...seen]
