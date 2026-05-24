@@ -69,12 +69,13 @@ export async function emitContent(ctx: BuildCtx, content: ProcessedContent[]) {
   const contentWithVirtual =
     ctx.virtualPages.length > 0 ? [...content, ...ctx.virtualPages] : content
   const otherEmitters = cfg.plugins.emitters.filter((e) => e.name !== "PageTypeDispatcher")
-  const counts = await Promise.all(
-    otherEmitters.map((emitter) =>
-      runEmitter(emitter, ctx, contentWithVirtual, staticResources, log),
-    ),
-  )
-  emittedFiles += counts.reduce((sum, c) => sum + c, 0)
+  emittedFiles += (
+    await Promise.all(
+      otherEmitters.map((emitter) =>
+        runEmitter(emitter, ctx, contentWithVirtual, staticResources, log),
+      ),
+    )
+  ).reduce((sum, c) => sum + c, 0)
 
   log.end(`Emitted ${emittedFiles} files to \`${argv.output}\` in ${perf.timeSince()}`)
 }

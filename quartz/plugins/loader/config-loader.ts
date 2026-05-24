@@ -854,10 +854,13 @@ function resolveGroups(
         const groupConfig = groups[item.group]
         groupPriority.set(item.group, groupConfig?.priority ?? item.priority)
       }
-      groupedComponents.get(item.group)!.push({
-        component: item.component,
-        groupOptions: item.groupOptions,
-      })
+      const groupMembers = groupedComponents.get(item.group)
+      if (groupMembers) {
+        groupMembers.push({
+          component: item.component,
+          groupOptions: item.groupOptions,
+        })
+      }
     }
   }
 
@@ -873,7 +876,8 @@ function resolveGroups(
       if (processedGroups.has(item.group)) continue
       processedGroups.add(item.group)
 
-      const members = groupedComponents.get(item.group)!
+      const members = groupedComponents.get(item.group)
+      if (!members) continue
       const groupConfig = groups[item.group] ?? {}
 
       const flexComponents = members.map((m) => ({
@@ -896,7 +900,7 @@ function resolveGroups(
         gap: groupConfig.gap ?? "1rem",
       }) as QuartzComponent
 
-      entries.push({ priority: groupPriority.get(item.group)!, component: flexComponent })
+      entries.push({ priority: groupPriority.get(item.group) ?? 50, component: flexComponent })
     } else {
       entries.push({ priority: item.priority, component: item.component })
     }
