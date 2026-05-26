@@ -76,7 +76,7 @@
     "crawl-links": {
       "source": "github:quartz-community/crawl-links",
       "resolved": "https://github.com/quartz-community/crawl-links.git",
-      "commit": "0218662b7fdff9911c4869199e5e265452951b21",
+      "commit": "69497e22046d62ee601415ad832bcde89a70a544",
       "installedAt": "2026-04-27T19:44:27.877Z"
     },
     "darkmode": {
@@ -148,13 +148,13 @@
     "note-properties": {
       "source": "github:quartz-community/note-properties",
       "resolved": "https://github.com/quartz-community/note-properties.git",
-      "commit": "198c465be70252d8fc179acac86100b4f60b8b8a",
+      "commit": "874712a9910299b906606c885ea1fe9602114ca7",
       "installedAt": "2026-04-27T19:44:28.603Z"
     },
     "obsidian-flavored-markdown": {
       "source": "github:quartz-community/obsidian-flavored-markdown",
       "resolved": "https://github.com/quartz-community/obsidian-flavored-markdown.git",
-      "commit": "186d6bd990a1b88ab35c4f66ea4f257f1e7b4a51",
+      "commit": "14a43c3d89ac3fc60d9b40db17edcf44ad57115f",
       "installedAt": "2026-05-02T13:36:53.091Z"
     },
     "obsidian-plugin-ttrpg-tools-maps": {
