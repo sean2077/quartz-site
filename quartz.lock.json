@@ -130,7 +130,7 @@
     "graph": {
       "source": "github:quartz-community/graph",
       "resolved": "https://github.com/quartz-community/graph.git",
-      "commit": "09bf6b4e2d31646a63f30c3f20dc6b39ade1f943",
+      "commit": "67ac4993907618a0ea5bd33726f792c572cddbad",
       "installedAt": "2026-04-27T19:44:28.387Z"
     },
     "hard-line-breaks": {
