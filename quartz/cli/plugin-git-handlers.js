@@ -1311,13 +1311,13 @@ export async function handlePluginAdd(
       }
 
       if (manifest?.components) {
+        const layoutPositions = new Set(["left", "right", "beforeBody", "afterBody"])
         const firstComponentKey = Object.keys(manifest.components)[0]
         const comp = manifest.components[firstComponentKey]
-        if (comp?.defaultPosition) {
+        if (comp?.defaultPosition && layoutPositions.has(comp.defaultPosition)) {
           newEntry.layout = {
             position: comp.defaultPosition,
             priority: comp.defaultPriority ?? 50,
-            display: "all",
           }
         }
       }
