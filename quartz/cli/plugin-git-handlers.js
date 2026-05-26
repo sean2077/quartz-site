@@ -20,6 +20,7 @@ import {
   resolveLockfileName,
   getNameOverrides,
 } from "./plugin-data.js"
+import { symlinkOrCopySync } from "./helpers.js"
 
 const INTERNAL_EXPORTS = new Set(["manifest", "default"])
 
@@ -128,12 +129,7 @@ function needsBuild(pluginDir) {
  *     share a single copy of packages like unified, vfile, rehype-raw, etc.
  */
 function trySymlink(target, linkPath) {
-  try {
-    fs.symlinkSync(target, linkPath, "dir")
-  } catch (err) {
-    if (err.code === "EEXIST") return
-    throw err
-  }
+  symlinkOrCopySync(target, linkPath)
 }
 
 function linkPeerPlugins(pluginDir) {
@@ -621,7 +617,7 @@ export async function handlePluginInstallUnified({
           }
           console.log(styleText("cyan", `→ Linking ${name} from ${resolvedPath}...`))
           fs.mkdirSync(path.dirname(pluginDir), { recursive: true })
-          fs.symlinkSync(resolvedPath, pluginDir, "dir")
+          symlinkOrCopySync(resolvedPath, pluginDir)
           lockfile.plugins[name] = {
             source: entry.source,
             resolved: resolvedPath,
@@ -810,7 +806,7 @@ export async function handlePluginInstallUnified({
             continue
           }
           fs.mkdirSync(path.dirname(pluginDir), { recursive: true })
-          fs.symlinkSync(entry.resolved, pluginDir, "dir")
+          symlinkOrCopySync(entry.resolved, pluginDir)
           console.log(styleText("green", `✓ ${name} restored (local symlink)`))
           restoredPlugins.push({ name, pluginDir })
           installed++
@@ -1045,7 +1041,7 @@ export async function handlePluginInstallUnified({
           continue
         }
         fs.mkdirSync(path.dirname(pluginDir), { recursive: true })
-        fs.symlinkSync(entry.resolved, pluginDir, "dir")
+        symlinkOrCopySync(entry.resolved, pluginDir)
         console.log(styleText("green", `  ✓ ${name} (local) linked`))
         pluginsToBuild.push({ name, pluginDir })
         installed++
@@ -1222,7 +1218,7 @@ export async function handlePluginAdd(
         }
         console.log(styleText("cyan", `→ Adding ${name} from local path ${resolvedPath}...`))
         fs.mkdirSync(path.dirname(pluginDir), { recursive: true })
-        fs.symlinkSync(resolvedPath, pluginDir, "dir")
+        symlinkOrCopySync(resolvedPath, pluginDir)
         lockfile.plugins[name] = {
           source,
           resolved: resolvedPath,
