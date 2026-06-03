@@ -106,7 +106,7 @@
     "explorer": {
       "source": "github:quartz-community/explorer",
       "resolved": "https://github.com/quartz-community/explorer.git",
-      "commit": "41b79524ee1f90e4352e1537c9b08226048fb22a",
+      "commit": "4420d14f2aeacf6f2a4530daab75cd38671c2c54",
       "installedAt": "2026-04-27T19:44:28.368Z"
     },
     "favicon": {
@@ -130,7 +130,7 @@
     "graph": {
       "source": "github:quartz-community/graph",
       "resolved": "https://github.com/quartz-community/graph.git",
-      "commit": "67ac4993907618a0ea5bd33726f792c572cddbad",
+      "commit": "26deebbebbe304c197ba7c53f788ec85dca71ac1",
       "installedAt": "2026-04-27T19:44:28.387Z"
     },
     "hard-line-breaks": {
