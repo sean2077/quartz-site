@@ -1,0 +1,33 @@
+{
+  "name": "footer",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./components": "./components/index.ts"
+  },
+  "quartz": {
+    "name": "footer",
+    "displayName": "Footer",
+    "description": "Renders the site footer with configurable fork attribution and links.",
+    "version": "1.0.0",
+    "category": "component",
+    "quartzVersion": ">=5.0.0",
+    "defaultOptions": {
+      "creditText": "Quartz — sean2077 fork",
+      "creditUrl": "https://github.com/sean2077/quartz-site",
+      "links": {}
+    },
+    "components": {
+      "Footer": {
+        "name": "Footer",
+        "displayName": "Footer",
+        "description": "Site footer with fork attribution and project links.",
+        "version": "1.0.0",
+        "defaultPosition": "footer",
+        "defaultPriority": 50
+      }
+    },
+    "defaultEnabled": true
+  }
+}

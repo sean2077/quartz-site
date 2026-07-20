@@ -243,9 +243,11 @@ plugins:
     layout:
       position: afterBody
       priority: 10
-  - source: github:quartz-community/footer
+  - source: ./plugins/local/footer
     enabled: true
     options:
+      creditText: "Quartz — sean2077 fork"
+      creditUrl: https://github.com/sean2077/quartz-site
       links:
         GitHub: https://github.com/sean2077/
         Email: mailto:seanzhang.dev@gmail.com
