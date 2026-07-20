@@ -246,6 +246,13 @@ plugins:
     layout:
       position: afterBody
       priority: 3
+  - source: ./plugins/local/explorer-folder-icons
+    enabled: true
+    options:
+      dataPath: .obsidian/plugins/obsidian-icon-folder/data.json
+    layout:
+      position: afterBody
+      priority: 4
   - source: github:quartz-community/comments
     enabled: false
     options:

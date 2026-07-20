@@ -1,0 +1,31 @@
+{
+  "name": "explorer-folder-icons",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./components": "./components/index.ts"
+  },
+  "quartz": {
+    "name": "explorer-folder-icons",
+    "displayName": "Explorer Folder Icons",
+    "description": "Renders published Obsidian Iconize folder assignments in Explorer.",
+    "version": "1.0.0",
+    "category": "component",
+    "quartzVersion": ">=5.0.0",
+    "defaultOptions": {
+      "dataPath": ".obsidian/plugins/obsidian-icon-folder/data.json"
+    },
+    "components": {
+      "ExplorerFolderIcons": {
+        "name": "ExplorerFolderIcons",
+        "displayName": "Explorer Folder Icons",
+        "description": "Decorates Explorer folders with their published Iconize assignments.",
+        "version": "1.0.0",
+        "defaultPosition": "afterBody",
+        "defaultPriority": 4
+      }
+    },
+    "defaultEnabled": true
+  }
+}

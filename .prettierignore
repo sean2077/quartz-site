@@ -3,4 +3,5 @@ node_modules
 .quartz-cache
 .quartz
 .omx
+.oma
 .playwright-mcp
