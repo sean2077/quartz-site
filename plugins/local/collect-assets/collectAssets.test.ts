@@ -1,6 +1,7 @@
 import test, { describe } from "node:test"
 import assert from "node:assert"
-import { isLocalAsset, normalizeAssetPath } from "./index"
+import type { FilePath, FullSlug } from "@quartz-community/types"
+import { isLocalAsset, normalizeAssetPath, resolveAssetReference } from "./index"
 
 describe("CollectAssets helpers", () => {
   const extensions = new Set([".png", ".pdf"])
@@ -18,6 +19,31 @@ describe("CollectAssets helpers", () => {
     assert.equal(
       normalizeAssetPath("/9Z%20%E7%B3%BB%E7%BB%9F%E5%8C%BA/a.pdf#page=1"),
       "9Z 系统区/a.pdf",
+    )
+  })
+
+  test("rewrites resolved assets to their canonical emitted path", () => {
+    const assetMap = new Map<string, FilePath>([
+      ["image-1.png", "9Z 系统区/附件/image-1.png" as FilePath],
+    ])
+
+    assert.deepEqual(
+      resolveAssetReference(
+        "1c-计算机知识库/01-通用编程语言/cuda/example" as FullSlug,
+        "../../../image-1.png?size=400",
+        assetMap,
+      ),
+      {
+        source: "9Z 系统区/附件/image-1.png",
+        url: "../../../9z-系统区/附件/image-1.png?size=400",
+      },
+    )
+  })
+
+  test("does not invent a path for an unresolved asset", () => {
+    assert.equal(
+      resolveAssetReference("notes/example" as FullSlug, "images/missing.png", new Map()),
+      undefined,
     )
   })
 })

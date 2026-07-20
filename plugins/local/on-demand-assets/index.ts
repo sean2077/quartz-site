@@ -20,15 +20,6 @@ const defaultOptions: Options = {
   alwaysInclude: [],
 }
 
-function sluggifySegment(s: string): string {
-  return s
-    .replace(/\s/g, "-")
-    .replace(/&/g, "-and-")
-    .replace(/%/g, "-percent")
-    .replace(/\?/g, "")
-    .replace(/#/g, "")
-}
-
 function toPosixPath(fp: string): string {
   return fp.split(path.sep).join("/")
 }
@@ -68,15 +59,12 @@ export async function getAllAssets(argv: Argv, cfg: QuartzConfig): Promise<Map<s
       assetMap.set(basename, fp)
     }
 
-    const slugifiedBasename = sluggifySegment(basename)
+    const slugifiedPath = slugifyFilePath(fp)
+    const slugifiedBasename = path.posix.basename(slugifiedPath)
     if (slugifiedBasename !== basename && !assetMap.has(slugifiedBasename)) {
       assetMap.set(slugifiedBasename, fp)
     }
 
-    const slugifiedPath = fp
-      .split("/")
-      .map((seg) => sluggifySegment(seg))
-      .join("/")
     if (slugifiedPath !== fp && !assetMap.has(slugifiedPath)) {
       assetMap.set(slugifiedPath, fp)
     }
@@ -156,10 +144,11 @@ export const OnDemandAssets: QuartzEmitterPlugin<Partial<Options>> = (userOpts) 
         }
       }
 
-      const savedCount = assetMap.size - copiedAssets.size
+      const totalAssets = new Set(assetMap.values()).size
+      const savedCount = totalAssets - copiedAssets.size
       if (savedCount > 0) {
         console.log(
-          `\nOnDemandAssets: Copied ${copiedAssets.size}/${assetMap.size} assets (saved ${savedCount} unused files)`,
+          `\nOnDemandAssets: Copied ${copiedAssets.size}/${totalAssets} assets (saved ${savedCount} unused files)`,
         )
       }
     },

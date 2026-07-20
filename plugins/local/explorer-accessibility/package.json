@@ -1,0 +1,28 @@
+{
+  "name": "explorer-accessibility",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./components": "./components/index.ts"
+  },
+  "quartz": {
+    "name": "explorer-accessibility",
+    "displayName": "Explorer Accessibility",
+    "description": "Keeps Explorer toggle and controlled-content ARIA state synchronized.",
+    "version": "1.0.0",
+    "category": "component",
+    "quartzVersion": ">=5.0.0",
+    "components": {
+      "ExplorerAccessibility": {
+        "name": "ExplorerAccessibility",
+        "displayName": "Explorer Accessibility",
+        "description": "Synchronizes Explorer expanded state for assistive technology.",
+        "version": "1.0.0",
+        "defaultPosition": "afterBody",
+        "defaultPriority": 3
+      }
+    },
+    "defaultEnabled": true
+  }
+}

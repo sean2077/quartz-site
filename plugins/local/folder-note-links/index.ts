@@ -3,15 +3,24 @@ import path from "node:path"
 import type { Element, Root } from "hast"
 import type { QuartzTransformerPlugin } from "@quartz-community/types"
 import type { FilePath, FullSlug, RelativeURL, SimpleSlug } from "@quartz-community/utils"
-import { resolveRelative, simplifySlug, slugifyFilePath } from "@quartz-community/utils"
+import {
+  getFileExtension,
+  resolveRelative,
+  simplifySlug,
+  slugifyFilePath,
+} from "@quartz-community/utils"
 import { visit } from "unist-util-visit"
 import { parse as parseYaml } from "yaml"
+import { isPortableAliasSlug } from "../portable-aliases/index.ts"
 
 const frontmatterRegex = /^---\r?\n([\s\S]*?)\r?\n---/
 const publishedSlugCache = new Map<string, ReadonlySet<FullSlug>>()
 
 type PublishFrontmatter = {
   publish?: unknown
+  aliases?: unknown
+  alias?: unknown
+  permalink?: unknown
 }
 
 function isExternalOrAnchor(href: string): boolean {
@@ -80,6 +89,30 @@ function isPublished(frontmatter: PublishFrontmatter): boolean {
   return frontmatter.publish === true || frontmatter.publish === "true"
 }
 
+function coerceAliases(value: unknown): string[] {
+  if (value === undefined || value === null) return []
+  if (!Array.isArray(value)) {
+    return String(value)
+      .split(",")
+      .map((alias) => alias.trim())
+      .filter(Boolean)
+  }
+
+  return value.filter((alias) => typeof alias === "string" || typeof alias === "number").map(String)
+}
+
+function addPublishedAliases(slugs: Set<FullSlug>, frontmatter: PublishFrontmatter): void {
+  for (const alias of coerceAliases(frontmatter.aliases ?? frontmatter.alias)) {
+    const mockPath = getFileExtension(alias) === ".md" ? alias : `${alias}.md`
+    const aliasSlug = slugifyFilePath(mockPath as FilePath)
+    if (isPortableAliasSlug(aliasSlug)) slugs.add(aliasSlug)
+  }
+
+  if (typeof frontmatter.permalink === "string" && isPortableAliasSlug(frontmatter.permalink)) {
+    slugs.add(frontmatter.permalink as FullSlug)
+  }
+}
+
 function addAncestorFolderPages(slugs: Set<FullSlug>, slug: FullSlug): void {
   const dir = slugDir(slug)
   if (dir.length === 0) return
@@ -105,11 +138,13 @@ export function buildPublishedSlugSet(
 
   for (const relativePath of relativePaths) {
     const filePath = path.join(contentDir, relativePath)
-    if (!isPublished(getFrontmatter(filePath))) continue
+    const frontmatter = getFrontmatter(filePath)
+    if (!isPublished(frontmatter)) continue
 
     const slug = slugifyFilePath(relativePath as FilePath)
     slugs.add(slug)
     addAncestorFolderPages(slugs, slug)
+    addPublishedAliases(slugs, frontmatter)
   }
 
   return slugs
@@ -160,20 +195,15 @@ export function resolveFolderNoteLink(
     publishedSlugs.has(candidate),
   )
   if (matches.length === 1) return matches[0]
+  if (matches.length > 1 || targetSlug.includes("/")) return undefined
+
+  const globalSuffix = `/${targetSlug.replace(/\/index$/, "")}/index`
+  const globalMatches = [...publishedSlugs].filter(
+    (slug) => slug === globalSuffix.slice(1) || slug.endsWith(globalSuffix),
+  )
+  if (globalMatches.length === 1) return globalMatches[0]
 
   return undefined
-}
-
-function hasUnpublishedFolderNoteCandidate(
-  currentSlug: FullSlug,
-  targetSlug: FullSlug,
-  allSlugs: readonly FullSlug[],
-  publishedSlugs: ReadonlySet<FullSlug>,
-): boolean {
-  const allSlugSet = new Set(allSlugs)
-  return folderNoteCandidates(currentSlug, targetSlug).some(
-    (candidate) => allSlugSet.has(candidate) && !publishedSlugs.has(candidate),
-  )
 }
 
 function rewriteLinksField(links: unknown, from: FullSlug, to: FullSlug): SimpleSlug[] | undefined {
@@ -206,15 +236,15 @@ export function rewriteFolderNoteLinks(
     const target = dataSlug as FullSlug
     const resolved = resolveFolderNoteLink(currentSlug, target, publishedSlugs)
     if (resolved === undefined) {
-      if (hasUnpublishedFolderNoteCandidate(currentSlug, target, allSlugs, publishedSlugs)) {
-        node.tagName = "span"
-        delete node.properties.href
-        delete node.properties["data-slug"]
-        rewrittenLinks = rewriteLinksField(rewrittenLinks, target, target)?.filter(
-          (link) => link !== simplifySlug(target),
-        )
-        rewrites++
-      }
+      if (slugExists(publishedSlugs, target)) return
+
+      node.tagName = "span"
+      delete node.properties.href
+      delete node.properties["data-slug"]
+      rewrittenLinks = rewriteLinksField(rewrittenLinks, target, target)?.filter(
+        (link) => link !== simplifySlug(target),
+      )
+      rewrites++
       return
     }
 

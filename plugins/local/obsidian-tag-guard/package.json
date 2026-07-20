@@ -1,0 +1,18 @@
+{
+  "name": "obsidian-tag-guard",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "quartz": {
+    "name": "obsidian-tag-guard",
+    "displayName": "Obsidian Tag Guard",
+    "description": "Prevents numeric Markdown references from becoming invalid inline tags.",
+    "version": "1.0.0",
+    "category": "transformer",
+    "quartzVersion": ">=5.0.0",
+    "defaultOrder": 29,
+    "defaultEnabled": true
+  }
+}

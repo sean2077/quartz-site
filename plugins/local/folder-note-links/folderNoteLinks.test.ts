@@ -53,6 +53,20 @@ describe("folder note links", () => {
     )
   })
 
+  test("resolves a unique folder note outside the current ancestors", () => {
+    assert.equal(
+      resolveFolderNoteLink(
+        "1f-数据结构与算法/_terms/tarjan-算法" as FullSlug,
+        "03.dfs（图论）" as FullSlug,
+        new Set([
+          "1f-数据结构与算法/06.图论/03.dfs（图论）/index",
+          "1f-数据结构与算法/_terms/tarjan-算法",
+        ] as FullSlug[]),
+      ),
+      "1f-数据结构与算法/06.图论/03.dfs（图论）/index",
+    )
+  })
+
   test("rewrites to a published folder-note even when a short unpublished slug exists", () => {
     const tree = linkTree("../../12.线段树", "12.线段树")
     rewriteFolderNoteLinks(
@@ -102,6 +116,23 @@ describe("folder note links", () => {
     assert.equal(result.rewrites, 0)
   })
 
+  test("removes href for an unresolved normal note target", () => {
+    const tree = linkTree("../missing", "missing")
+    const result = rewriteFolderNoteLinks(
+      tree,
+      "notes/index" as FullSlug,
+      ["notes/index"] as FullSlug[],
+      new Set(["notes/index"] as FullSlug[]),
+      ["missing"],
+    )
+
+    const link = tree.children[0]
+    assert.equal(link.type, "element")
+    assert.equal(link.tagName, "span")
+    assert.equal(link.properties.href, undefined)
+    assert.deepEqual(result.links, [])
+  })
+
   test("ignores external links", () => {
     const tree = linkTree("https://example.com", "missing")
     const result = rewriteFolderNoteLinks(
@@ -136,7 +167,7 @@ describe("folder note links", () => {
       mkdirSync(join(dir, "1C 计算机知识库", "11-分布式系统"), { recursive: true })
       writeFileSync(
         join(dir, "1C 计算机知识库", "01-通用编程语言", "01-通用编程语言.md"),
-        "---\npublish: true\n---\n",
+        "---\npublish: true\naliases:\n  - Programming Languages\n  - d * G\npermalink: language-guide\n---\n",
       )
       writeFileSync(
         join(dir, "1C 计算机知识库", "11-分布式系统", "11-分布式系统.md"),
@@ -146,6 +177,9 @@ describe("folder note links", () => {
       const slugs = buildPublishedSlugSet(dir)
       assert.equal(slugs.has("1c-计算机知识库/01-通用编程语言/index" as FullSlug), true)
       assert.equal(slugs.has("1c-计算机知识库/index" as FullSlug), true)
+      assert.equal(slugs.has("programming-languages" as FullSlug), true)
+      assert.equal(slugs.has("language-guide" as FullSlug), true)
+      assert.equal(slugs.has("d-*-g" as FullSlug), false)
       assert.equal(slugs.has("1c-计算机知识库/11-分布式系统/index" as FullSlug), false)
     } finally {
       rmSync(dir, { recursive: true, force: true })

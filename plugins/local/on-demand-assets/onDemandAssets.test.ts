@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { VFile } from "vfile"
-import { OnDemandAssets, resolveAsset } from "./index"
+import { getAllAssets, OnDemandAssets, resolveAsset } from "./index"
 import type { BuildCtx, FilePath, ProcessedContent } from "@quartz-community/types"
 
 describe("OnDemandAssets", () => {
@@ -20,6 +20,27 @@ describe("OnDemandAssets", () => {
       resolveAsset("9Z%20%E7%B3%BB%E7%BB%9F%E5%8C%BA/%E9%99%84%E4%BB%B6/%E5%9B%BE.png", assetMap),
       "9Z 系统区/附件/图.png",
     )
+  })
+
+  test("indexes assets by the same lowercase slug used for emitted paths", async () => {
+    const input = await mkdtemp(join(tmpdir(), "quartz-assets-input-"))
+
+    try {
+      await mkdir(join(input, "9Z 系统区", "附件"), { recursive: true })
+      await writeFile(join(input, "9Z 系统区", "附件", "Pasted image 20241219121156.png"), "image")
+
+      const assetMap = await getAllAssets(
+        { directory: input } as BuildCtx["argv"],
+        { configuration: { ignorePatterns: [] } } as BuildCtx["cfg"],
+      )
+
+      assert.equal(
+        resolveAsset("9z-系统区/附件/pasted-image-20241219121156.png", assetMap),
+        "9Z 系统区/附件/Pasted image 20241219121156.png",
+      )
+    } finally {
+      await rm(input, { recursive: true, force: true })
+    }
   })
 
   test("syncs assets referenced by changed markdown during partial emit", async () => {
