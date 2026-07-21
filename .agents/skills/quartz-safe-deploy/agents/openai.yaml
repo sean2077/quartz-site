@@ -1,0 +1,4 @@
+interface:
+  display_name: "Quartz Safe Deploy"
+  short_description: "Privacy-gated Quartz production deployment"
+  default_prompt: "Use $quartz-safe-deploy to build this Quartz site, check publication and privacy gates, deploy to Cloudflare Pages, and verify production."
