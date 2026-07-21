@@ -5,3 +5,9 @@ node_modules
 .omx
 .oma
 .playwright-mcp
+
+# Managed verbatim by agent-scaffold
+AGENTS.md
+CLAUDE.md
+.agents/skills/README.md
+.agents/subagents/README.md

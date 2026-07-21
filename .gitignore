@@ -20,7 +20,7 @@ content/
 .wrangler/
 
 # AI tools
-.claude/
 .serena/
-CLAUDE.md
-AGENTS.md
+.claude/settings.local.json
+.worktrees/
+.claude/allow-trunk-edit
