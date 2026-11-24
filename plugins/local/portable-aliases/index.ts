@@ -52,7 +52,9 @@ export const PortableAliases: QuartzTransformerPlugin = () => ({
         const aliases = file.data.aliases
         if (!Array.isArray(aliases)) return
 
-        const stringAliases = aliases.filter((alias): alias is string => typeof alias === "string")
+        const stringAliases = aliases.filter(
+          (alias): alias is FullSlug => typeof alias === "string",
+        )
         const { portable, rejected } = partitionPortableAliasSlugs(stringAliases)
         const canonicalSlug = file.data.slug as FullSlug | undefined
         const resolved = canonicalSlug

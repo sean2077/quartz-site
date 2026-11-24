@@ -218,7 +218,7 @@ function rewriteLinksField(links: unknown, from: FullSlug, to: FullSlug): Simple
 export function rewriteFolderNoteLinks(
   tree: Root,
   currentSlug: FullSlug,
-  allSlugs: readonly FullSlug[],
+  _allSlugs: readonly FullSlug[],
   publishedSlugs: ReadonlySet<FullSlug>,
   links?: unknown,
 ): { rewrites: number; links?: SimpleSlug[] } {

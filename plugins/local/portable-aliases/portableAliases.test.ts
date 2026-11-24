@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, test } from "node:test"
+import type { FullSlug } from "@quartz-community/types"
 import { isPortableAliasSlug, partitionPortableAliasSlugs, resolvePortableAliasSlug } from "./index"
 
 describe("PortableAliases", () => {
@@ -34,11 +35,12 @@ describe("PortableAliases", () => {
   })
 
   test("resolves dot-prefixed aliases with POSIX separators on Windows", () => {
-    const canonical = "1c-计算机知识库/_terms/目标文件"
+    const canonical = "1c-计算机知识库/_terms/目标文件" as FullSlug
+    const resolve = (alias: string) => resolvePortableAliasSlug(alias as FullSlug, canonical)
 
-    assert.equal(resolvePortableAliasSlug(".o", canonical), "1c-计算机知识库/_terms/.o")
-    assert.equal(resolvePortableAliasSlug(".obj", canonical), "1c-计算机知识库/_terms/.obj")
-    assert.equal(resolvePortableAliasSlug("../old-title", canonical), "1c-计算机知识库/old-title")
-    assert.equal(resolvePortableAliasSlug("global-title", canonical), "global-title")
+    assert.equal(resolve(".o"), "1c-计算机知识库/_terms/.o")
+    assert.equal(resolve(".obj"), "1c-计算机知识库/_terms/.obj")
+    assert.equal(resolve("../old-title"), "1c-计算机知识库/old-title")
+    assert.equal(resolve("global-title"), "global-title")
   })
 })
