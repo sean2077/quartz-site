@@ -53,6 +53,8 @@ async function buildPluginAsync(pluginDir, name) {
     return true
   } catch (error) {
     console.log(styleText("red", `  ✗ ${name}: build failed`))
+    const details = String(error.stderr ?? "").trim() || error.message || String(error)
+    console.error(details)
     return false
   }
 }
@@ -229,13 +231,21 @@ function parseExportsFromDts(content) {
   return exports
 }
 
-async function regeneratePluginIndex() {
+async function regeneratePluginIndex(lockfile) {
   if (!fs.existsSync(PLUGINS_DIR)) return
 
-  const pluginDirs = fs.readdirSync(PLUGINS_DIR).filter((name) => {
-    const pluginPath = path.join(PLUGINS_DIR, name)
-    return fs.statSync(pluginPath).isDirectory()
-  })
+  // Cache directories are not declarations: removed or failed installs can leave
+  // stale exports behind. Include configured local/name overrides as well as
+  // lockfile keys, using the caller's in-memory lock before it is written to disk.
+  const declaredPlugins = new Set(Object.keys(lockfile?.plugins ?? {}))
+  for (const entry of readPluginsJson()?.plugins ?? []) {
+    declaredPlugins.add(extractPluginName(entry.source))
+  }
+  const pluginDirs = [...declaredPlugins]
+    .sort()
+    .filter((name) =>
+      fs.statSync(path.join(PLUGINS_DIR, name), { throwIfNoEntry: false })?.isDirectory(),
+    )
 
   // Phase 1: Collect all exports per plugin, detect conflicts
   const pluginExports = new Map()
@@ -687,7 +697,7 @@ export async function handlePluginInstallUnified({
       for (const ok of results) {
         if (!ok) failed++
       }
-      await regeneratePluginIndex()
+      await regeneratePluginIndex(lockfile)
     }
 
     if (orphans.length > 0) {
@@ -714,7 +724,7 @@ export async function handlePluginInstallUnified({
         console.log(styleText("yellow", `✗ Removed ${name} (not in config)`))
       }
       if (removedOrphans) {
-        await regeneratePluginIndex()
+        await regeneratePluginIndex(lockfile)
       }
     }
 
@@ -866,7 +876,7 @@ export async function handlePluginInstallUnified({
           installed--
         }
       }
-      await regeneratePluginIndex()
+      await regeneratePluginIndex(lockfile)
     }
 
     console.log()
@@ -987,7 +997,7 @@ export async function handlePluginInstallUnified({
         },
       )
       failed += results.filter((ok) => !ok).length
-      await regeneratePluginIndex()
+      await regeneratePluginIndex(lockfile)
     }
 
     if (lockfileChanged) {
@@ -1156,7 +1166,7 @@ export async function handlePluginInstallUnified({
     }
   }
 
-  await regeneratePluginIndex()
+  await regeneratePluginIndex(lockfile)
 
   console.log()
   if (failed === 0) {
@@ -1307,7 +1317,7 @@ export async function handlePluginAdd(
       if (ok) console.log(styleText("green", `  ✓ ${name} built`))
       return ok
     })
-    await regeneratePluginIndex()
+    await regeneratePluginIndex(lockfile)
   }
 
   writeLockfile(lockfile)
@@ -1375,7 +1385,7 @@ export async function handlePluginRemove(names) {
   }
 
   if (removed) {
-    await regeneratePluginIndex()
+    await regeneratePluginIndex(lockfile)
   }
 
   writeLockfile(lockfile)
@@ -1757,7 +1767,7 @@ export async function handlePluginPrune({ dryRun = false } = {}) {
   }
 
   if (removed > 0) {
-    await regeneratePluginIndex()
+    await regeneratePluginIndex(lockfile)
   }
 
   writeLockfile(lockfile)

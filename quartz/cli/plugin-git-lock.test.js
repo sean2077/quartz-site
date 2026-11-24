@@ -35,7 +35,10 @@ function fixture(t, { subdir } = {}) {
   )
   fs.writeFileSync(path.join(pluginRoot, "package-lock.json"), "{}\n")
   fs.writeFileSync(path.join(pluginRoot, "dist", "index.js"), "export const marker = 'old'\n")
-  fs.writeFileSync(path.join(pluginRoot, "dist", "index.d.ts"), "export {}\n")
+  fs.writeFileSync(
+    path.join(pluginRoot, "dist", "index.d.ts"),
+    "declare const marker: string;\nexport { marker };\n",
+  )
   git(repo, "add", ".")
   git(repo, "commit", "-m", "old plugin")
   const old = git(repo, "rev-parse", "HEAD")
@@ -63,13 +66,13 @@ function fixture(t, { subdir } = {}) {
   return { root, repo, project, pluginRoot, pluginDir, url, old, latest, writeLock }
 }
 
-function install(project, options = {}) {
+function invoke(project, handler, args) {
   return spawnSync(
     process.execPath,
     [
       "--input-type=module",
       "--eval",
-      `import { handlePluginInstallUnified } from ${JSON.stringify(handlerUrl)}; await handlePluginInstallUnified(${JSON.stringify(options)});`,
+      `import { ${handler} } from ${JSON.stringify(handlerUrl)}; await ${handler}(...${JSON.stringify(args)});`,
     ],
     {
       cwd: project,
@@ -83,6 +86,10 @@ function install(project, options = {}) {
       },
     },
   )
+}
+
+function install(project, options = {}) {
+  return invoke(project, "handlePluginInstallUnified", [options])
 }
 
 function successful(result) {
@@ -174,8 +181,12 @@ test("a plugin build failure is a nonzero command result", (t) => {
     JSON.stringify({
       name: "fixture",
       version: "1.0.0",
-      scripts: { build: 'node -e "process.exit(1)"' },
+      scripts: { build: "node build.js" },
     }),
+  )
+  fs.writeFileSync(
+    path.join(f.pluginRoot, "build.js"),
+    "console.error('fixture build diagnostic')\nprocess.exit(1)\n",
   )
   git(f.repo, "add", ".")
   git(f.repo, "commit", "-m", "broken plugin build")
@@ -183,7 +194,67 @@ test("a plugin build failure is a nonzero command result", (t) => {
   const result = install(f.project)
   assert.notEqual(result.status, 0, result.stdout)
   assert.match(result.stdout, /build failed/)
+  assert.match(result.stderr, /fixture build diagnostic/)
   assert.match(result.stderr, /plugin\(s\) failed to install or build/)
+})
+
+function prebuiltPlugin(directory, exports) {
+  fs.mkdirSync(path.join(directory, "dist"), { recursive: true })
+  fs.writeFileSync(
+    path.join(directory, "package.json"),
+    JSON.stringify({ name: path.basename(directory), version: "1.0.0", type: "module" }),
+  )
+  fs.writeFileSync(
+    path.join(directory, "dist", "index.js"),
+    exports.map((name) => `export const ${name} = true;`).join("\n"),
+  )
+  fs.writeFileSync(
+    path.join(directory, "dist", "index.d.ts"),
+    `${exports.map((name) => `declare const ${name}: boolean;`).join("\n")}\nexport { ${exports.join(", ")} };\n`,
+  )
+}
+
+test("generated exports include only locked or configured plugins, preserving local and name overrides", (t) => {
+  const f = fixture(t)
+  const cache = path.dirname(f.pluginDir)
+  const local = path.join(f.project, "plugins", "local", "config-local")
+  prebuiltPlugin(local, ["ConfigLocal"])
+  fs.cpSync(local, path.join(cache, "config-local"), { recursive: true })
+  prebuiltPlugin(path.join(cache, "config-alias"), ["ConfiguredRemote"])
+  // This stale cache must neither leak exports nor suppress the locked marker
+  // export through an otherwise false name conflict.
+  prebuiltPlugin(path.join(cache, "orphan"), ["marker", "OrphanOnly"])
+  fs.writeFileSync(
+    path.join(f.project, "quartz.config.yaml"),
+    JSON.stringify({
+      plugins: [
+        { source: "./plugins/local/config-local" },
+        { source: { repo: "github:example/remote", name: "config-alias" } },
+        { source: { repo: f.url, name: "renamed-fixture" } },
+      ],
+    }),
+  )
+
+  successful(install(f.project))
+  const index = fs.readFileSync(path.join(cache, "index.ts"), "utf8")
+  assert.match(index, /export \{ marker \} from "\.\/fixture"/)
+  assert.match(index, /export \{ ConfigLocal \} from "\.\/config-local"/)
+  assert.match(index, /export \{ ConfiguredRemote \} from "\.\/config-alias"/)
+  assert.doesNotMatch(index, /OrphanOnly|\.\/orphan/)
+  assert.equal(fs.existsSync(path.join(cache, "orphan")), true)
+})
+
+test("adding a local plugin with an override exports it before its new lock entry is saved", (t) => {
+  const f = fixture(t)
+  const source = path.join(f.project, "local-source")
+  prebuiltPlugin(source, ["LocalValue"])
+
+  successful(invoke(f.project, "handlePluginAdd", [[source], { name: "local-alias" }]))
+  const index = fs.readFileSync(path.join(f.project, ".quartz", "plugins", "index.ts"), "utf8")
+  assert.match(index, /export \{ LocalValue \} from "\.\/local-alias"/)
+  const lock = JSON.parse(fs.readFileSync(path.join(f.project, "quartz.lock.json"), "utf8"))
+  assert.equal(lock.plugins["local-alias"].commit, "local")
+  assert.equal(lock.plugins["local-alias"].resolved, source)
 })
 
 test("missing local plugins fail without modifying their source", (t) => {

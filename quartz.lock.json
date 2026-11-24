@@ -157,12 +157,6 @@
       "commit": "4ad984e087449e619ee1629772c130c71ae163f0",
       "installedAt": "2026-05-02T13:36:53.091Z"
     },
-    "obsidian-plugin-ttrpg-tools-maps": {
-      "source": "github:quartz-community/obsidian-plugin-ttrpg-tools-maps",
-      "resolved": "https://github.com/quartz-community/obsidian-plugin-ttrpg-tools-maps.git",
-      "commit": "88bfc51640246d6ff23434dfe4bab582dc88a448",
-      "installedAt": "2026-04-17T00:45:24.174Z"
-    },
     "og-image": {
       "source": "github:quartz-community/og-image",
       "resolved": "https://github.com/quartz-community/og-image.git",
@@ -180,17 +174,6 @@
       "resolved": "https://github.com/quartz-community/page-title.git",
       "commit": "b56138e46927ecafda60e64dfc4f6951e0818251",
       "installedAt": "2026-04-27T19:44:28.580Z"
-    },
-    "quartz-themes": {
-      "source": {
-        "name": "quartz-themes",
-        "repo": "github:saberzero1/quartz-themes",
-        "subdir": "plugin"
-      },
-      "resolved": "https://github.com/saberzero1/quartz-themes.git",
-      "commit": "1caab2c7ff19a8b3cc40cbebef0d7f0f49540dee",
-      "subdir": "plugin",
-      "installedAt": "2026-04-25T21:14:36.539Z"
     },
     "reader-mode": {
       "source": "github:quartz-community/reader-mode",
@@ -227,12 +210,6 @@
       "resolved": "https://github.com/quartz-community/spacer.git",
       "commit": "f013389f71ca615e0b37984971e358a54f1625f7",
       "installedAt": "2026-04-27T19:44:28.931Z"
-    },
-    "stacked-pages": {
-      "source": "github:quartz-community/stacked-pages",
-      "resolved": "https://github.com/quartz-community/stacked-pages.git",
-      "commit": "e4ccf97602c9ea72f9fefad3032d0a6675498099",
-      "installedAt": "2026-04-27T19:44:29.119Z"
     },
     "syntax-highlighting": {
       "source": "github:quartz-community/syntax-highlighting",
