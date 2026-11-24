@@ -11,5 +11,7 @@ test-results
 # Managed verbatim by agent-scaffold
 AGENTS.md
 CLAUDE.md
+.agents/conventions/
 .agents/skills/README.md
 .agents/subagents/README.md
+.agents/tools/release/
