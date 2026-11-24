@@ -91,12 +91,14 @@ body {
 
 .page .content-meta {
   color: color-mix(in srgb, var(--darkgray) 75%, var(--light));
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
 }
 
 .page article {
   p,
   li {
-    line-height: 1.85;
+    line-height: 1.78;
   }
 
   h1,
@@ -106,6 +108,7 @@ body {
 
   h3 {
     color: #059669;
+    margin-top: 1.6rem;
   }
 
   h4 {
@@ -113,6 +116,7 @@ body {
   }
 
   h2 {
+    margin-top: 2.1rem;
     padding-bottom: 0.4rem;
     border-bottom: 1px solid var(--lightgray);
   }
@@ -144,8 +148,146 @@ body {
     border: 1px solid var(--lightgray);
   }
 
-  .table-container > table {
-    margin-inline: 0;
+  .base-container a.internal {
+    color: var(--dark);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--secondary);
+      text-decoration: underline;
+      text-underline-offset: 0.15em;
+    }
+  }
+
+  // Native Bases and Markdown tables: compact rows, a card surface, and
+  // dates kept on one line instead of wrapping inside a narrow column.
+  .table-container {
+    margin-block: 1.25rem 1.5rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--lightgray) transparent;
+
+    > table {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.93rem;
+      font-variant-numeric: tabular-nums;
+
+      > * {
+        line-height: 1.5;
+      }
+    }
+
+    th,
+    td {
+      min-width: 0;
+      padding: 0.55rem 0.8rem;
+    }
+
+    th {
+      background: color-mix(in srgb, var(--lightgray) 28%, var(--light));
+      border-bottom: 1px solid var(--lightgray);
+      color: var(--gray);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    td {
+      border-bottom: 1px solid color-mix(in srgb, var(--lightgray) 65%, transparent);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr:hover {
+      background: color-mix(in srgb, var(--secondary) 4%, transparent);
+    }
+
+    td time,
+    td .base-null {
+      white-space: nowrap;
+    }
+
+    td .base-null {
+      color: color-mix(in srgb, var(--gray) 70%, transparent);
+    }
+
+    th[data-property="updated"],
+    td:has(time) {
+      text-align: right;
+    }
+  }
+
+  // Paginated Bases tables own a scroll wrapper already; make that wrapper the
+  // visible card so wide tables stay inside the reading surface.
+  .bpt-table-wrapper {
+    border: 1px solid var(--lightgray);
+    border-radius: 10px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--lightgray) transparent;
+
+    > table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    thead th {
+      background: color-mix(in srgb, var(--lightgray) 28%, var(--light));
+      border-bottom: 1px solid var(--lightgray);
+      color: var(--gray);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    th,
+    td {
+      padding: 0.4rem 0.75rem;
+    }
+
+    td {
+      border-bottom: 1px solid color-mix(in srgb, var(--lightgray) 65%, transparent);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+  }
+
+  .base-view .tag {
+    display: inline-block;
+    padding: 0.05rem 0.45rem;
+    border: 1px solid var(--lightgray);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--lightgray) 45%, transparent);
+    color: var(--darkgray);
+    font-size: 0.78em;
+    line-height: 1.6;
+    text-decoration: none;
+  }
+
+  @media all and ($mobile) {
+    .table-container > table {
+      min-width: 640px;
+      font-size: 0.86rem;
+    }
+
+    .table-container th,
+    .table-container td {
+      padding: 0.45rem 0.6rem;
+    }
   }
 }
 
@@ -227,6 +369,11 @@ body {
     > .sidebar.right {
       grid-template-columns: minmax(0, 1fr);
     }
+  }
+
+  .page > #quartz-body > .sidebar.left .page-title {
+    font-size: 1.5rem;
+    line-height: 1.2;
   }
 
   .page[data-frame="default"] > #quartz-body {
