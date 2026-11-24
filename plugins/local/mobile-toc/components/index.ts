@@ -5,59 +5,96 @@ import type {
   QuartzComponentProps,
 } from "@quartz-community/types"
 
-const script = `
+export const mobileTocScript = `
 function setupMobileToc() {
   const toggleBtn = document.querySelector(".mobile-toc-toggle")
   const closeBtn = document.querySelector(".mobile-toc-close")
   const panel = document.querySelector(".mobile-toc-panel")
-  const backdrop = document.querySelector(".mobile-toc-backdrop")
   const backToTopBtn = document.querySelector(".mobile-back-to-top")
-  if (!toggleBtn || !panel || !backdrop) return
+  if (!toggleBtn || !panel) return
 
+  const mobileViewport = window.matchMedia("(max-width: 800px)")
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)")
+  let previousOverflow
+  const restoreScroll = () => {
+    if (previousOverflow !== undefined) document.body.style.overflow = previousOverflow
+    previousOverflow = undefined
+    toggleBtn.setAttribute("aria-expanded", "false")
+  }
   const openToc = () => {
-    panel.classList.add("active")
-    backdrop.classList.add("active")
+    if (!mobileViewport.matches || panel.open) return
+    // Native dialogs provide an inert background, Escape and focus restoration,
+    // including when rendered inside a reading surface.
+    panel.showModal()
+    previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
+    toggleBtn.setAttribute("aria-expanded", "true")
   }
   const closeToc = () => {
-    panel.classList.remove("active")
-    backdrop.classList.remove("active")
-    document.body.style.overflow = ""
+    if (panel.open) panel.close()
+    restoreScroll()
   }
-  const handleEscape = (e) => {
-    if (e.key === "Escape" && panel.classList.contains("active")) closeToc()
+  const closeOnDesktop = () => {
+    if (!mobileViewport.matches) closeToc()
+  }
+  const handleClose = () => {
+    if (!panel.open) restoreScroll()
+  }
+  const closeOnBackdrop = (event) => {
+    if (event.target !== panel) return
+    const bounds = panel.getBoundingClientRect()
+    if (event.clientX < bounds.left || event.clientX > bounds.right ||
+        event.clientY < bounds.top || event.clientY > bounds.bottom) closeToc()
+  }
+  const tocLinks = panel.querySelectorAll("a[href]")
+  const cycleFocusAtBoundary = (event) => {
+    if (!panel.open || event.key !== "Tab" || event.defaultPrevented ||
+        event.altKey || event.ctrlKey || event.metaKey) return
+    const first = closeBtn ?? tocLinks[0]
+    const last = tocLinks[tocLinks.length - 1] ?? closeBtn
+    // Keep end-of-list Tab navigation inside the sheet instead of transferring
+    // focus to browser chrome. Leave all intermediate navigation native.
+    if (event.shiftKey && document.activeElement === first && last) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last && first) {
+      event.preventDefault()
+      first.focus()
+    }
   }
 
   toggleBtn.addEventListener("click", openToc)
   closeBtn?.addEventListener("click", closeToc)
-  backdrop.addEventListener("click", closeToc)
-  document.addEventListener("keydown", handleEscape)
-
-  const tocLinks = panel.querySelectorAll("a")
+  panel.addEventListener("click", closeOnBackdrop)
+  panel.addEventListener("close", handleClose)
+  panel.addEventListener("keydown", cycleFocusAtBoundary)
+  mobileViewport.addEventListener("change", closeOnDesktop)
   tocLinks.forEach((link) => link.addEventListener("click", closeToc))
 
+  const handleScroll = () => {
+    backToTopBtn?.classList.toggle("visible", window.scrollY > 300)
+  }
+  const scrollToTop = () => window.scrollTo({
+    top: 0,
+    behavior: reducedMotion.matches ? "instant" : "smooth",
+  })
   if (backToTopBtn) {
-    const handleScroll = () => {
-      if (window.scrollY > 300) backToTopBtn.classList.add("visible")
-      else backToTopBtn.classList.remove("visible")
-    }
-    const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" })
     window.addEventListener("scroll", handleScroll, { passive: true })
     backToTopBtn.addEventListener("click", scrollToTop)
     handleScroll()
-    window.addCleanup(() => {
-      window.removeEventListener("scroll", handleScroll)
-      backToTopBtn.removeEventListener("click", scrollToTop)
-    })
   }
 
   window.addCleanup(() => {
+    closeToc()
     toggleBtn.removeEventListener("click", openToc)
     closeBtn?.removeEventListener("click", closeToc)
-    backdrop.removeEventListener("click", closeToc)
+    panel.removeEventListener("click", closeOnBackdrop)
+    panel.removeEventListener("close", handleClose)
+    panel.removeEventListener("keydown", cycleFocusAtBoundary)
+    mobileViewport.removeEventListener("change", closeOnDesktop)
     tocLinks.forEach((link) => link.removeEventListener("click", closeToc))
-    document.removeEventListener("keydown", handleEscape)
-    document.body.style.overflow = ""
+    window.removeEventListener("scroll", handleScroll)
+    backToTopBtn?.removeEventListener("click", scrollToTop)
   })
 }
 document.addEventListener("nav", setupMobileToc)
@@ -66,7 +103,6 @@ document.addEventListener("nav", setupMobileToc)
 const css = `
 .mobile-toc-toggle,
 .mobile-toc-panel,
-.mobile-toc-backdrop,
 .mobile-back-to-top {
   display: none;
 }
@@ -74,9 +110,9 @@ const css = `
   .mobile-toc-toggle,
   .mobile-back-to-top {
     position: fixed;
-    right: 1rem;
-    width: 42px;
-    height: 42px;
+    right: max(1rem, env(safe-area-inset-right, 0px));
+    width: 44px;
+    height: 44px;
     border-radius: 12px;
     cursor: pointer;
     z-index: 89;
@@ -85,7 +121,6 @@ const css = `
     justify-content: center;
     transition: opacity 0.2s, visibility 0.2s, background-color 0.2s;
     -webkit-tap-highlight-color: transparent;
-    transform: translateZ(0);
     touch-action: manipulation;
   }
   .mobile-toc-toggle svg,
@@ -94,10 +129,10 @@ const css = `
     height: 20px;
   }
   .mobile-back-to-top {
-    bottom: calc(1rem + 42px + 0.5rem + env(safe-area-inset-bottom, 0px));
+    bottom: calc(1rem + 44px + 0.5rem + env(safe-area-inset-bottom, 0px));
     background-color: var(--light);
     border: 1px solid var(--lightgray);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     opacity: 0;
     visibility: hidden;
   }
@@ -113,7 +148,7 @@ const css = `
     bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
     background-color: var(--dark);
     border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
   .mobile-toc-toggle svg {
     stroke: var(--light);
@@ -121,23 +156,29 @@ const css = `
   }
   .mobile-toc-panel {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    inset: auto 0 0;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
     max-height: 70vh;
+    max-height: 70dvh;
+    margin: 0;
+    padding: 0;
+    color: var(--darkgray);
     background-color: var(--light);
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
+    border: 1px solid var(--lightgray);
+    border-bottom: 0;
+    border-radius: 20px 20px 0 0;
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
-    z-index: 95;
-    transform: translateY(100%);
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
-    display: flex;
     flex-direction: column;
   }
-  .mobile-toc-panel.active {
-    transform: translateY(0);
+  .mobile-toc-panel[open] {
+    display: flex;
+    animation: mobile-toc-enter 0.2s ease-out;
+  }
+  .mobile-toc-panel::backdrop {
+    background-color: rgba(0, 0, 0, 0.45);
   }
   .mobile-toc-panel::before {
     content: "";
@@ -154,23 +195,26 @@ const css = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.25rem 1rem 0.75rem;
+    padding: 1rem 1rem 0.5rem;
     flex-shrink: 0;
   }
   .mobile-toc-header h3 {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: 1rem;
     font-weight: 600;
-    color: var(--darkgray);
-    text-transform: uppercase;
+    color: var(--dark);
   }
   .mobile-toc-close {
     background: none;
     border: none;
     cursor: pointer;
     padding: 0.5rem;
-    color: var(--gray);
+    color: var(--darkgray);
     display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
     border-radius: 8px;
   }
   .mobile-toc-close svg {
@@ -178,9 +222,9 @@ const css = `
     height: 18px;
   }
   .mobile-toc-content {
-    padding: 0.5rem 0.75rem 2rem;
+    padding: 0.5rem 0.75rem calc(1rem + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    min-height: 0;
     flex: 1;
     overscroll-behavior: contain;
   }
@@ -193,19 +237,24 @@ const css = `
     margin-bottom: 2px;
   }
   .mobile-toc-content a {
+    box-sizing: border-box;
+    min-height: 44px;
     display: block;
     padding: 0.625rem 0.75rem;
     color: var(--darkgray);
     border-radius: 8px;
-    font-size: 0.9rem;
-    line-height: 1.4;
+    font-size: 0.95rem;
+    line-height: 1.5;
     text-decoration: none;
     font-weight: 500;
     -webkit-tap-highlight-color: transparent;
   }
+  .mobile-toc-content a:hover {
+    background: var(--highlight);
+  }
   .mobile-toc-content .depth-0 a {
     font-weight: 600;
-    color: var(--dark);
+    color: var(--secondary);
   }
   .mobile-toc-content .depth-1 { padding-left: 0.75rem; }
   .mobile-toc-content .depth-2 { padding-left: 1.5rem; }
@@ -213,24 +262,17 @@ const css = `
   .mobile-toc-content .depth-4 { padding-left: 3rem; }
   .mobile-toc-content .depth-5 { padding-left: 3.75rem; }
   .mobile-toc-content .depth-6 { padding-left: 4.5rem; }
-  .mobile-toc-backdrop {
-    position: fixed;
-    inset: 0;
-    height: 100dvh;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 92;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
-    display: block;
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-    transform: translateZ(0);
-  }
-  .mobile-toc-backdrop.active {
-    opacity: 1;
-    visibility: visible;
-  }
+}
+@keyframes mobile-toc-enter {
+  from { transform: translateY(1rem); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mobile-toc-panel[open] { animation: none; }
+  .mobile-toc-toggle, .mobile-back-to-top { transition: none; }
+}
+@media print {
+  .mobile-toc-toggle, .mobile-toc-panel, .mobile-back-to-top { display: none; }
 }
 `
 
@@ -245,6 +287,7 @@ function icon(kind: "up" | "list" | "close") {
     "stroke-width": 2,
     "stroke-linecap": "round",
     "stroke-linejoin": "round",
+    "aria-hidden": "true",
   }
 
   if (kind === "up") {
@@ -271,28 +314,52 @@ const MobileTocComponent: QuartzComponent = ({ fileData, cfg }: QuartzComponentP
   const toc = (fileData.toc ?? []) as Array<{ slug: string; depth: number; text: string }>
   if (toc.length === 0) return null
 
-  const title = cfg.locale?.startsWith("zh") ? "目录" : "Table of Contents"
+  const isChinese = cfg.locale?.startsWith("zh")
+  const title = isChinese ? "目录" : "Table of Contents"
 
   return h(
     Fragment,
     null,
-    h("div", { class: "mobile-toc-backdrop" }),
-    h("button", { class: "mobile-back-to-top", "aria-label": "Back to top" }, icon("up")),
     h(
       "button",
-      { class: "mobile-toc-toggle", "aria-label": "Toggle table of contents" },
+      {
+        type: "button",
+        class: "mobile-back-to-top",
+        "aria-label": isChinese ? "返回顶部" : "Back to top",
+      },
+      icon("up"),
+    ),
+    h(
+      "button",
+      {
+        type: "button",
+        class: "mobile-toc-toggle",
+        "aria-label": isChinese ? "打开目录" : "Open table of contents",
+        "aria-controls": "mobile-toc-panel",
+        "aria-expanded": "false",
+        "aria-haspopup": "dialog",
+      },
       icon("list"),
     ),
     h(
-      "div",
-      { class: "mobile-toc-panel" },
+      "dialog",
+      {
+        id: "mobile-toc-panel",
+        class: "mobile-toc-panel",
+        "aria-labelledby": "mobile-toc-title",
+      },
       h(
         "div",
         { class: "mobile-toc-header" },
-        h("h3", null, title),
+        h("h3", { id: "mobile-toc-title" }, title),
         h(
           "button",
-          { class: "mobile-toc-close", "aria-label": "Close table of contents" },
+          {
+            type: "button",
+            class: "mobile-toc-close",
+            autofocus: true,
+            "aria-label": isChinese ? "关闭目录" : "Close table of contents",
+          },
           icon("close"),
         ),
       ),
@@ -316,6 +383,6 @@ const MobileTocComponent: QuartzComponent = ({ fileData, cfg }: QuartzComponentP
 }
 
 MobileTocComponent.css = css
-MobileTocComponent.afterDOMLoaded = script
+MobileTocComponent.afterDOMLoaded = mobileTocScript
 
 export const MobileToc: QuartzComponentConstructor = () => MobileTocComponent

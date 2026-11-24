@@ -2,7 +2,7 @@ import sourceMapSupport from "source-map-support"
 sourceMapSupport.install(options)
 import path from "path"
 import { PerfTimer } from "./util/perf"
-import { rm } from "fs/promises"
+import { rm, readdir } from "fs/promises"
 import { GlobbyFilterFunction, isGitIgnored } from "globby"
 import { styleText } from "util"
 import { parseMarkdown } from "./processors/parse"
@@ -22,6 +22,13 @@ import { getStaticResourcesFromPlugins } from "./plugins"
 import { randomIdNonSecure } from "./util/random"
 import { ChangeEvent } from "./plugins/types"
 import { minimatch } from "minimatch"
+import {
+  ChangeRecord,
+  ContentMap,
+  applyContentChanges,
+  clearChangeRecord,
+} from "./util/incremental"
+import { diffContentFiles, pollingEnabled } from "./util/contentWatcher"
 
 function reportSlugCollisions(content: ProcessedContent[]): void {
   const collisions = detectSlugCollisions(content)
@@ -29,23 +36,12 @@ function reportSlugCollisions(content: ProcessedContent[]): void {
   console.warn(styleText("yellow", formatCollisionWarning(collisions)))
 }
 
-type ContentMap = Map<
-  FilePath,
-  | {
-      type: "markdown"
-      content: ProcessedContent
-    }
-  | {
-      type: "other"
-    }
->
-
 type BuildData = {
   ctx: BuildCtx
   ignored: GlobbyFilterFunction
   mut: Mutex
   contentMap: ContentMap
-  changesSinceLastBuild: Record<FilePath, ChangeEvent["type"]>
+  changesSinceLastBuild: ChangeRecord
   lastBuildMs: number
 }
 
@@ -76,7 +72,14 @@ async function buildQuartz(argv: Argv, mut: Mutex, clientRefresh: () => void) {
 
   const release = await mut.acquire()
   perf.addEvent("clean")
-  await rm(output, { recursive: true, force: true })
+  try {
+    const entries = await readdir(output)
+    await Promise.all(
+      entries.map((e) => rm(path.join(output, e), { recursive: true, force: true })),
+    )
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err
+  }
   console.log(`Cleaned output directory \`${output}\` in ${perf.timeSince("clean")}`)
 
   perf.addEvent("glob")
@@ -157,16 +160,24 @@ async function startWatching(
     lastBuildMs: 0,
   }
 
-  const watcher = chokidar.watch(".", {
+  const contentRoot = path.resolve(argv.directory)
+  const usePerFilePolling = pollingEnabled(process.env.CHOKIDAR_USEPOLLING)
+  const knownFiles = new Set(allFiles.map((fp) => toPosixPath(fp.toString()) as FilePath))
+  const watcherTargets = usePerFilePolling
+    ? Array.from(knownFiles, (fp) => path.resolve(contentRoot, fp))
+    : ["."]
+  const watcher = chokidar.watch(watcherTargets, {
     awaitWriteFinish: { stabilityThreshold: 250 },
     persistent: true,
-    cwd: argv.directory,
+    ...(usePerFilePolling ? {} : { cwd: argv.directory }),
     ignoreInitial: true,
   })
 
   const changes: ChangeEvent[] = []
+  let disposed = false
   let rebuildTimeout: ReturnType<typeof setTimeout> | null = null
   const scheduleRebuild = () => {
+    if (disposed) return
     if (rebuildTimeout) clearTimeout(rebuildTimeout)
     rebuildTimeout = setTimeout(() => {
       rebuildTimeout = null
@@ -175,27 +186,84 @@ async function startWatching(
       })
     }, 100)
   }
+
+  const recordChange = (fp: string, type: ChangeEvent["type"]) => {
+    if (disposed) return
+    const relativePath = toPosixPath(
+      path.isAbsolute(fp) ? path.relative(contentRoot, fp) : fp,
+    ) as FilePath
+    if (relativePath.startsWith("../") || buildData.ignored(relativePath)) return
+
+    if (type === "add") knownFiles.add(relativePath)
+    if (type === "delete") knownFiles.delete(relativePath)
+    changes.push({ path: relativePath, type })
+    scheduleRebuild()
+  }
+
   watcher
     .on("add", (fp) => {
-      fp = toPosixPath(fp)
-      if (buildData.ignored(fp)) return
-      changes.push({ path: fp as FilePath, type: "add" })
-      scheduleRebuild()
+      recordChange(fp, "add")
     })
     .on("change", (fp) => {
-      fp = toPosixPath(fp)
-      if (buildData.ignored(fp)) return
-      changes.push({ path: fp as FilePath, type: "change" })
-      scheduleRebuild()
+      recordChange(fp, "change")
     })
     .on("unlink", (fp) => {
-      fp = toPosixPath(fp)
-      if (buildData.ignored(fp)) return
-      changes.push({ path: fp as FilePath, type: "delete" })
-      scheduleRebuild()
+      recordChange(fp, "delete")
     })
 
+  let discoveryTimer: ReturnType<typeof setInterval> | undefined
+  if (usePerFilePolling) {
+    if (watcherTargets.length > 0) {
+      await new Promise<void>((resolve, reject) => {
+        watcher.once("ready", resolve)
+        watcher.once("error", reject)
+      })
+    }
+
+    const configuredInterval = Number.parseInt(process.env.CHOKIDAR_INTERVAL ?? "", 10)
+    const discoveryInterval = Math.max(
+      Number.isFinite(configuredInterval) && configuredInterval > 0 ? configuredInterval : 100,
+      1000,
+    )
+    let scanInProgress = false
+    const reconcileFileList = async () => {
+      if (disposed || scanInProgress) return
+      scanInProgress = true
+      try {
+        const scannedFiles = await glob("**/*.*", argv.directory, cfg.configuration.ignorePatterns)
+        if (disposed) return
+        const currentFiles = new Set(scannedFiles)
+        const { added, deleted } = diffContentFiles(knownFiles, currentFiles)
+
+        for (const fp of added) {
+          watcher.add(path.resolve(contentRoot, fp))
+          recordChange(fp, "add")
+        }
+
+        for (const fp of deleted) {
+          if (disposed) return
+          await watcher.unwatch(path.resolve(contentRoot, fp))
+          recordChange(fp, "delete")
+        }
+      } finally {
+        scanInProgress = false
+      }
+    }
+
+    discoveryTimer = setInterval(() => {
+      reconcileFileList().catch((err) => {
+        console.error(styleText("red", "Content scan failed:"), err.message ?? err)
+      })
+    }, discoveryInterval)
+    console.log(
+      `Watching ${knownFiles.size} content files in \`${contentRoot}\` using polling (ready)`,
+    )
+  }
+
   return async () => {
+    disposed = true
+    if (rebuildTimeout) clearTimeout(rebuildTimeout)
+    if (discoveryTimer) clearInterval(discoveryTimer)
     await watcher.close()
   }
 }
@@ -245,41 +313,8 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
       })
     }
 
-    // update state using changesSinceLastBuild
-    // we do this weird play of add => compute change events => remove
-    // so that partialEmitters can do appropriate cleanup based on the content of deleted files
-    for (const [file, change] of Object.entries(changesSinceLastBuild)) {
-      if (change === "delete") {
-        // universal delete case
-        contentMap.delete(file as FilePath)
-      }
-
-      // manually track non-markdown files as processed files only
-      // contains markdown files
-      if (change === "add" && path.extname(file) !== ".md") {
-        contentMap.set(file as FilePath, {
-          type: "other",
-        })
-      }
-    }
-
-    const changeEvents: ChangeEvent[] = Object.entries(changesSinceLastBuild).map(([fp, type]) => {
-      const path = fp as FilePath
-      const processedContent = contentMap.get(path)
-      if (processedContent?.type === "markdown") {
-        const [_tree, file] = processedContent.content
-        return {
-          type,
-          path,
-          file,
-        }
-      }
-
-      return {
-        type,
-        path,
-      }
-    })
+    // Snapshot deleted notes before removing them, so emitters retain their real output slugs.
+    const changeEvents = applyContentChanges(contentMap, changesSinceLastBuild)
 
     // update allFiles and then allSlugs with the consistent view of content map
     ctx.allFiles = Array.from(contentMap.keys())
@@ -353,6 +388,7 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
       `Emitted ${emittedFiles} files to \`${argv.output}\` in ${perf.timeSince("rebuild")}`,
     )
     console.log(styleText("green", `Done rebuilding in ${perf.timeSince()}`))
+    clearChangeRecord(changesSinceLastBuild)
     changes.splice(0, numChangesInBuild)
     clientRefresh()
   } finally {

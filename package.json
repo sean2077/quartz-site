@@ -17,7 +17,9 @@
     "precheck": "npm run install-plugins",
     "check": "tsc --noEmit && npx prettier . --check",
     "format": "npx prettier . --write",
-    "test": "tsx --test",
+    "test": "node scripts/run-tests.mjs",
+    "test:smoke": "node scripts/smoke-build.mjs",
+    "test:e2e": "playwright test",
     "profile": "0x -D prof ./quartz/bootstrap-cli.mjs build --concurrency=1",
     "install-plugins": "npx quartz plugin install",
     "prebuild": "npm run install-plugins",
@@ -57,6 +59,7 @@
     "esbuild-sass-plugin": "^3.6.0",
     "github-slugger": "^2.0.0",
     "globby": "^16.1.0",
+    "hast-util-from-html": "2.0.3",
     "hast-util-to-jsx-runtime": "^2.3.6",
     "isomorphic-git": "^1.36.3",
     "lightningcss": "^1.31.1",
@@ -83,6 +86,7 @@
     "yargs": "^18.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
     "@quartz-community/types": "github:quartz-community/types",
     "@quartz-community/utils": "github:quartz-community/utils",
     "@types/hast": "^3.0.4",

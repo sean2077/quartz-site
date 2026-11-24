@@ -27,3 +27,18 @@
 - `quartz/processors/`: Markdown 解析、发布过滤和文件输出三阶段处理。
 - `quartz/plugins/loader/`: 社区插件安装、manifest 解析、依赖校验、组件/Frame 注册。
 - `plugins/local/`: 本 Fork 保留的本地插件和组件能力。
+
+## 质量检查
+
+```sh
+npm ci
+npm run check
+npm test
+npm run test:smoke
+npx playwright install chromium # 首次运行浏览器测试时安装
+npm run test:e2e
+```
+
+`test:smoke` 使用合成公开笔记验证完整构建，输出到 `.quartz/smoke-public/`，无需连接独立 vault。`test:e2e` 基于该输出验证响应式布局、Bases、移动目录和 SPA 行为，并生成浏览器报告与截图。
+
+上游选择、架构调整、性能指标与已知边界见 [2026-11-24 维护审查](docs/maintenance/2026-11-24-quality-review.md)。

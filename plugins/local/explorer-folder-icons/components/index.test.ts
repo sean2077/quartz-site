@@ -15,6 +15,31 @@ import {
 
 type Listener = () => void
 
+interface ClientElement {
+  tagName: string
+  className: string
+  parentElement: ClientControl | null
+  textContent: string
+  src: string
+  alt: string
+  draggable: boolean
+  attributes: Map<string, string>
+  styleProperties: Map<string, string>
+  classList: { contains(value: string): boolean }
+  style: { setProperty(name: string, value: string): void }
+  setAttribute(name: string, value: string): void
+}
+
+interface ClientControl {
+  children: Array<ClientElement | ClientTitle>
+  insertBefore(child: ClientElement, reference: ClientTitle): void
+}
+
+interface ClientTitle {
+  parentElement: ClientControl
+  readonly previousElementSibling: ClientElement | ClientTitle | null
+}
+
 function writeVaultFile(root: string, relativePath: string, content: string) {
   const filePath = path.join(root, ...relativePath.split("/"))
   mkdirSync(path.dirname(filePath), { recursive: true })
@@ -28,13 +53,13 @@ function componentProps(root: string, slugs: string[]): QuartzComponentProps {
   } as unknown as QuartzComponentProps
 }
 
-function createClientElement(tagName: string) {
+function createClientElement(tagName: string): ClientElement {
   const attributes = new Map<string, string>()
   const styleProperties = new Map<string, string>()
-  const element = {
+  const element: ClientElement = {
     tagName,
     className: "",
-    parentElement: null as ReturnType<typeof createControl> | null,
+    parentElement: null,
     textContent: "",
     src: "",
     alt: "",
@@ -58,13 +83,10 @@ function createClientElement(tagName: string) {
   return element
 }
 
-function createControl() {
-  const control = {
-    children: [] as Array<ReturnType<typeof createClientElement> | ReturnType<typeof createTitle>>,
-    insertBefore(
-      child: ReturnType<typeof createClientElement>,
-      reference: ReturnType<typeof createTitle>,
-    ) {
+function createControl(): ClientControl {
+  const control: ClientControl = {
+    children: [],
+    insertBefore(child: ClientElement, reference: ClientTitle) {
       const index = control.children.indexOf(reference)
       child.parentElement = control
       control.children.splice(index, 0, child)
@@ -73,8 +95,8 @@ function createControl() {
   return control
 }
 
-function createTitle(control: ReturnType<typeof createControl>) {
-  const title = {
+function createTitle(control: ClientControl): ClientTitle {
+  const title: ClientTitle = {
     parentElement: control,
     get previousElementSibling() {
       const index = control.children.indexOf(title)

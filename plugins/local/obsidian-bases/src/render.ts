@@ -3,7 +3,7 @@ import { visit } from "unist-util-visit"
 import type { FullSlug, QuartzPluginData } from "@quartz-community/types"
 import type { BaseBlock, ObsidianBasesOptions } from "./types.ts"
 import { defaultOptions } from "./types.ts"
-import { executeQuery } from "./query.ts"
+import { executeViewQueries } from "./query.ts"
 import { renderBaseViews } from "./views.ts"
 import { fromHtml } from "hast-util-from-html"
 
@@ -49,11 +49,11 @@ export function renderBasePlaceholders(
 
     try {
       // Execute query (pass fileData as currentFile for this.file references)
-      const filteredFiles = executeQuery(allFiles, block.config, options.maxResults, fileData)
+      const viewFiles = executeViewQueries(allFiles, block.config, options.maxResults, fileData)
 
       // Render views
       const currentSlug = (fileData.slug ?? "") as FullSlug
-      const rendered = renderBaseViews(block.config, filteredFiles, currentSlug)
+      const rendered = renderBaseViews(block.config, viewFiles, currentSlug)
 
       // Parse HTML string to HAST
       const parsedHtml = fromHtml(rendered.html, { fragment: true })

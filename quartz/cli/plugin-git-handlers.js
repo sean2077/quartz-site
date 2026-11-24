@@ -21,30 +21,17 @@ import {
   getNameOverrides,
 } from "./plugin-data.js"
 import { symlinkOrCopySync } from "./helpers.js"
+import {
+  assertCommit,
+  checkoutPinnedCommitAsync,
+  cloneAtCommitAsync,
+  cloneWithSubdirAsync,
+  isSubdirAtCommit,
+} from "./plugin-git-lock.js"
 
 const INTERNAL_EXPORTS = new Set(["manifest", "default"])
 
 const execAsync = promisify(execCb)
-
-async function cloneWithSubdirAsync({ url, ref, subdir, pluginDir }) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "quartz-plugin-"))
-  try {
-    if (ref) {
-      await execAsync(`git clone --depth 1 --branch ${ref} "${url}" "${tmpDir}"`)
-    } else {
-      await execAsync(`git clone --depth 1 "${url}" "${tmpDir}"`)
-    }
-    const subdirPath = path.join(tmpDir, subdir)
-    if (!fs.existsSync(subdirPath)) {
-      throw new Error(`Subdirectory "${subdir}" not found in cloned repository`)
-    }
-    fs.cpSync(subdirPath, pluginDir, { recursive: true })
-    const { stdout } = await execAsync("git rev-parse HEAD", { cwd: tmpDir })
-    return stdout.trim()
-  } finally {
-    fs.rmSync(tmpDir, { recursive: true, force: true })
-  }
-}
 
 async function buildPluginAsync(pluginDir, name) {
   if (hasPrebuiltDist(pluginDir)) {
@@ -66,6 +53,8 @@ async function buildPluginAsync(pluginDir, name) {
     return true
   } catch (error) {
     console.log(styleText("red", `  ✗ ${name}: build failed`))
+    const details = String(error.stderr ?? "").trim() || error.message || String(error)
+    console.error(details)
     return false
   }
 }
@@ -242,13 +231,21 @@ function parseExportsFromDts(content) {
   return exports
 }
 
-async function regeneratePluginIndex() {
+async function regeneratePluginIndex(lockfile) {
   if (!fs.existsSync(PLUGINS_DIR)) return
 
-  const pluginDirs = fs.readdirSync(PLUGINS_DIR).filter((name) => {
-    const pluginPath = path.join(PLUGINS_DIR, name)
-    return fs.statSync(pluginPath).isDirectory()
-  })
+  // Cache directories are not declarations: removed or failed installs can leave
+  // stale exports behind. Include configured local/name overrides as well as
+  // lockfile keys, using the caller's in-memory lock before it is written to disk.
+  const declaredPlugins = new Set(Object.keys(lockfile?.plugins ?? {}))
+  for (const entry of readPluginsJson()?.plugins ?? []) {
+    declaredPlugins.add(extractPluginName(entry.source))
+  }
+  const pluginDirs = [...declaredPlugins]
+    .sort()
+    .filter((name) =>
+      fs.statSync(path.join(PLUGINS_DIR, name), { throwIfNoEntry: false })?.isDirectory(),
+    )
 
   // Phase 1: Collect all exports per plugin, detect conflicts
   const pluginExports = new Map()
@@ -357,8 +354,7 @@ export async function handlePluginInstallUnified({
   concurrency: concurrencyOption,
 } = {}) {
   if (clean && latest) {
-    console.log(styleText("red", "✗ --clean and --latest cannot be used together"))
-    return
+    throw new Error("--clean and --latest cannot be used together")
   }
 
   const resolvedConcurrency = Math.max(1, concurrencyOption ?? os.cpus().length)
@@ -367,10 +363,7 @@ export async function handlePluginInstallUnified({
   let lockfile = readLockfile()
 
   if (!fromConfig && !lockfile) {
-    console.log(
-      styleText("yellow", "⚠ No quartz.lock.json found. Run 'npx quartz plugin add <repo>' first."),
-    )
-    return
+    throw new Error("No valid quartz.lock.json found. Run 'npx quartz plugin add <repo>' first.")
   }
 
   const resolvedNames = names
@@ -704,7 +697,7 @@ export async function handlePluginInstallUnified({
       for (const ok of results) {
         if (!ok) failed++
       }
-      await regeneratePluginIndex()
+      await regeneratePluginIndex(lockfile)
     }
 
     if (orphans.length > 0) {
@@ -731,7 +724,7 @@ export async function handlePluginInstallUnified({
         console.log(styleText("yellow", `✗ Removed ${name} (not in config)`))
       }
       if (removedOrphans) {
-        await regeneratePluginIndex()
+        await regeneratePluginIndex(lockfile)
       }
     }
 
@@ -751,6 +744,7 @@ export async function handlePluginInstallUnified({
       console.log(styleText("yellow", `⚠ Resolved ${installed.length} plugin(s), ${failed} failed`))
     }
 
+    if (failed > 0) throw new Error(`${failed} plugin(s) failed to resolve or build`)
     return
   }
 
@@ -836,6 +830,7 @@ export async function handlePluginInstallUnified({
             await cloneWithSubdirAsync({
               url: entry.resolved,
               ref: entry.ref,
+              commit: entry.commit,
               subdir: entry.subdir,
               pluginDir,
             })
@@ -846,15 +841,17 @@ export async function handlePluginInstallUnified({
                 `→ ${name}: cloning ${entry.resolved}@${entry.commit.slice(0, 7)}...`,
               ),
             )
-            const branchArg = entry.ref ? ` --branch ${entry.ref}` : ""
-            await execAsync(`git clone --depth 1${branchArg} "${entry.resolved}" "${pluginDir}"`)
-            await execAsync(`git checkout ${entry.commit}`, { cwd: pluginDir })
+            await cloneAtCommitAsync({
+              url: entry.resolved,
+              commit: entry.commit,
+              pluginDir,
+            })
           }
           console.log(styleText("green", `✓ ${name} restored`))
           restoredPlugins.push({ name, pluginDir })
           installed++
-        } catch {
-          console.log(styleText("red", `✗ ${name}: failed to restore`))
+        } catch (error) {
+          console.log(styleText("red", `✗ ${name}: failed to restore: ${error.message}`))
           failed++
         }
       })
@@ -879,7 +876,7 @@ export async function handlePluginInstallUnified({
           installed--
         }
       }
-      await regeneratePluginIndex()
+      await regeneratePluginIndex(lockfile)
     }
 
     console.log()
@@ -888,6 +885,7 @@ export async function handlePluginInstallUnified({
     } else {
       console.log(styleText("yellow", `⚠ Restored ${installed} plugin(s), ${failed} failed`))
     }
+    if (failed > 0) throw new Error(`${failed} plugin(s) failed to restore or build`)
     return
   }
 
@@ -895,6 +893,7 @@ export async function handlePluginInstallUnified({
     const pluginsToUpdate = nameFilter ? Array.from(nameFilter) : Object.keys(lockfile.plugins)
     const updatedPlugins = []
     let lockfileChanged = false
+    let failed = 0
 
     // Phase 1: Validate and categorize plugins (fast, sequential)
     const validPlugins = []
@@ -902,6 +901,7 @@ export async function handlePluginInstallUnified({
       const entry = lockfile.plugins[name]
       if (!entry) {
         console.log(styleText("yellow", `⚠ ${name} is not installed`))
+        failed++
         continue
       }
 
@@ -910,6 +910,7 @@ export async function handlePluginInstallUnified({
         console.log(
           styleText("yellow", `⚠ ${name} directory missing. Run 'npx quartz plugin install'.`),
         )
+        failed++
         continue
       }
 
@@ -976,6 +977,7 @@ export async function handlePluginInstallUnified({
           }
         } catch (error) {
           console.log(styleText("red", `✗ Failed to update ${name}: ${error}`))
+          failed++
         }
       })
     }
@@ -985,12 +987,17 @@ export async function handlePluginInstallUnified({
       console.log()
       console.log(styleText("cyan", "→ Rebuilding updated plugins..."))
       const concurrency = resolvedConcurrency
-      await runParallel(updatedPlugins, concurrency, async ({ name, pluginDir }) => {
-        const ok = await buildPluginAsync(pluginDir, name)
-        if (ok) console.log(styleText("green", `  ✓ ${name} rebuilt`))
-        return ok
-      })
-      await regeneratePluginIndex()
+      const results = await runParallel(
+        updatedPlugins,
+        concurrency,
+        async ({ name, pluginDir }) => {
+          const ok = await buildPluginAsync(pluginDir, name)
+          if (ok) console.log(styleText("green", `  ✓ ${name} rebuilt`))
+          return ok
+        },
+      )
+      failed += results.filter((ok) => !ok).length
+      await regeneratePluginIndex(lockfile)
     }
 
     if (lockfileChanged) {
@@ -998,6 +1005,7 @@ export async function handlePluginInstallUnified({
       console.log()
       console.log(styleText("gray", "Updated quartz.lock.json"))
     }
+    if (failed > 0) throw new Error(`${failed} plugin(s) failed to update or build`)
     return
   }
 
@@ -1052,8 +1060,20 @@ export async function handlePluginInstallUnified({
       continue
     }
 
+    try {
+      assertCommit(entry.commit)
+    } catch (error) {
+      console.log(styleText("red", `  ✗ ${name}: ${error.message}`))
+      failed++
+      continue
+    }
+
     if (fs.existsSync(pluginDir)) {
       if (entry.subdir) {
+        if (!isSubdirAtCommit(pluginDir, entry)) {
+          gitEntries.push({ name, entry, pluginDir, action: "clone" })
+          continue
+        }
         if (!needsBuild(pluginDir)) {
           console.log(
             styleText("gray", `  ✓ ${name}@${entry.commit.slice(0, 7)} already installed (subdir)`),
@@ -1091,9 +1111,7 @@ export async function handlePluginInstallUnified({
       try {
         if (action === "update") {
           console.log(styleText("cyan", `  → ${name}: updating to ${entry.commit.slice(0, 7)}...`))
-          const fetchRef = entry.ref ? ` ${entry.ref}` : ""
-          await execAsync(`git fetch --depth 1 origin${fetchRef}`, { cwd: pluginDir })
-          await execAsync(`git reset --hard ${entry.commit}`, { cwd: pluginDir })
+          await checkoutPinnedCommitAsync(pluginDir, entry.commit, entry.resolved)
           pluginsToBuild.push({ name, pluginDir })
           installed++
         } else {
@@ -1103,25 +1121,28 @@ export async function handlePluginInstallUnified({
             await cloneWithSubdirAsync({
               url: entry.resolved,
               ref: entry.ref,
+              commit: entry.commit,
               subdir: entry.subdir,
               pluginDir,
             })
           } else {
             console.log(styleText("cyan", `  → ${name}: cloning...`))
-            const branchArg = entry.ref ? ` --branch ${entry.ref}` : ""
-            await execAsync(`git clone --depth 1${branchArg} "${entry.resolved}" "${pluginDir}"`)
-            if (entry.commit !== "unknown") {
-              await execAsync(`git fetch --depth 1 origin ${entry.commit}`, { cwd: pluginDir })
-              await execAsync(`git checkout ${entry.commit}`, { cwd: pluginDir })
-            }
+            await cloneAtCommitAsync({
+              url: entry.resolved,
+              commit: entry.commit,
+              pluginDir,
+            })
           }
           console.log(styleText("green", `  ✓ ${name}@${entry.commit.slice(0, 7)}`))
           pluginsToBuild.push({ name, pluginDir })
           installed++
         }
-      } catch {
+      } catch (error) {
         console.log(
-          styleText("red", `  ✗ ${name}: failed to ${action === "update" ? "update" : "clone"}`),
+          styleText(
+            "red",
+            `  ✗ ${name}: failed to ${action === "update" ? "update" : "clone"}: ${error.message}`,
+          ),
         )
         failed++
       }
@@ -1145,7 +1166,7 @@ export async function handlePluginInstallUnified({
     }
   }
 
-  await regeneratePluginIndex()
+  await regeneratePluginIndex(lockfile)
 
   console.log()
   if (failed === 0) {
@@ -1153,6 +1174,7 @@ export async function handlePluginInstallUnified({
   } else {
     console.log(styleText("yellow", `⚠ Installed ${installed} plugin(s), ${failed} failed`))
   }
+  if (failed > 0) throw new Error(`${failed} plugin(s) failed to install or build`)
 }
 
 export async function handlePluginInstall() {
@@ -1295,7 +1317,7 @@ export async function handlePluginAdd(
       if (ok) console.log(styleText("green", `  ✓ ${name} built`))
       return ok
     })
-    await regeneratePluginIndex()
+    await regeneratePluginIndex(lockfile)
   }
 
   writeLockfile(lockfile)
@@ -1363,7 +1385,7 @@ export async function handlePluginRemove(names) {
   }
 
   if (removed) {
-    await regeneratePluginIndex()
+    await regeneratePluginIndex(lockfile)
   }
 
   writeLockfile(lockfile)
@@ -1745,7 +1767,7 @@ export async function handlePluginPrune({ dryRun = false } = {}) {
   }
 
   if (removed > 0) {
-    await regeneratePluginIndex()
+    await regeneratePluginIndex(lockfile)
   }
 
   writeLockfile(lockfile)

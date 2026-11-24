@@ -5,6 +5,8 @@ node_modules
 .omx
 .oma
 .playwright-mcp
+playwright-report
+test-results
 
 # Managed verbatim by agent-scaffold
 AGENTS.md

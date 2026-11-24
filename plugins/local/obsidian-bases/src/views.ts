@@ -14,7 +14,7 @@ import { resolveRelative } from "@quartz-community/utils"
  */
 export function renderBaseViews(
   config: BaseConfig,
-  files: QuartzPluginData[],
+  viewFiles: QuartzPluginData[][],
   currentSlug: FullSlug,
 ): RenderedView {
   const views = config.views ?? [{ type: "table", name: "Table" }]
@@ -23,7 +23,7 @@ export function renderBaseViews(
 
   // Single view - no tabs needed
   if (views.length === 1) {
-    const viewHtml = renderSingleView(views[0], files, properties, currentSlug)
+    const viewHtml = renderSingleView(views[0], viewFiles[0] ?? [], properties, currentSlug)
     if (views[0].type === "map") hasMap = true
 
     return {
@@ -43,7 +43,7 @@ export function renderBaseViews(
   const viewsHtml = views
     .map((view, i) => {
       if (view.type === "map") hasMap = true
-      const viewHtml = renderSingleView(view, files, properties, currentSlug)
+      const viewHtml = renderSingleView(view, viewFiles[i] ?? [], properties, currentSlug)
       return `<div class="base-view-container${i === 0 ? " active" : ""}" data-view-index="${i}">${viewHtml}</div>`
     })
     .join("")
@@ -141,7 +141,7 @@ function renderPaginatedTableView(
   currentSlug: FullSlug,
 ): string {
   const order = view.order ?? ["file.name"]
-  const pageSize = view.pageSize ?? 25
+  const pageSize = Number.isSafeInteger(view.pageSize) && view.pageSize! > 0 ? view.pageSize! : 25
   const showSearchBox = view.showSearchBox !== false
   const stickyHeader = view.stickyHeader !== false
   const paginationPosition = view.paginationPosition ?? "top"
@@ -194,7 +194,7 @@ function renderPaginatedTableView(
 
   const paginationHtml = `
     <div class="bpt-pagination">
-      <span class="bpt-page-info"></span>
+      <span class="bpt-page-info" role="status" aria-live="polite" aria-atomic="true"></span>
       <button class="bpt-prev" disabled aria-label="Previous page">&larr;</button>
       <button class="bpt-next" aria-label="Next page">&rarr;</button>
       <select class="bpt-page-size-select" aria-label="Items per page">${pageSizeOptions}</select>

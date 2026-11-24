@@ -4,12 +4,13 @@
     "experimentalDecorators": true,
     "module": "esnext",
     "target": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "strict": true,
     "incremental": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -17,7 +18,16 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact"
   },
-  "include": ["quartz/**/*.ts", "quartz/**/*.tsx", "*.ts", "*.tsx", "./package.json"],
+  "include": [
+    "quartz/**/*.ts",
+    "quartz/**/*.tsx",
+    "plugins/local/**/*.ts",
+    "plugins/local/**/*.tsx",
+    "tests/e2e/**/*.ts",
+    "*.ts",
+    "*.tsx",
+    "./package.json"
+  ],
   "exclude": [
     "build/**/*.d.ts",
     ".quartz/**/src/**",

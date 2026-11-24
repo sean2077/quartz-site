@@ -241,6 +241,12 @@ a {
         flex-direction: row;
         padding: 0;
         padding-top: 2rem;
+        // text in the header row (a long page title) may break anywhere, so the row fits the
+        // screen; the buttons keep their size. Links set their own overflow-wrap.
+        & > *,
+        & > * a {
+          overflow-wrap: anywhere;
+        }
       }
     }
 
@@ -257,6 +263,10 @@ a {
         height: unset;
         width: 100%;
         flex-direction: row;
+        // Wrap what does not fit side by side: on a phone the graph and backlinks are each about
+        // 180px at their narrowest, and a row that cannot wrap pushed the page wider than the
+        // screen (horizontal scroll).
+        flex-wrap: wrap;
         padding: 0;
         & > * {
           flex: 1;
@@ -315,7 +325,7 @@ a {
 
 // Full-width frame: no sidebars, center content spans full width
 .page[data-frame="full-width"] > #quartz-body {
-  grid-template-columns: auto;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto;
   grid-template-areas:
     "grid-header"
@@ -323,7 +333,7 @@ a {
     "grid-footer";
 
   @media all and ($tablet) {
-    grid-template-columns: auto;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   & .center.full-width {
@@ -334,14 +344,14 @@ a {
 
 // Minimal frame: no sidebars, no header/footer chrome, body content only + footer
 .page[data-frame="minimal"] > #quartz-body {
-  grid-template-columns: auto;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto;
   grid-template-areas:
     "grid-center"
     "grid-footer";
 
   @media all and ($tablet) {
-    grid-template-columns: auto;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   & .center.minimal {
@@ -548,9 +558,27 @@ code {
   font-size: 0.9em;
   color: var(--dark);
   font-family: var(--codeFont);
+  font-variant-ligatures: none;
   border-radius: 5px;
   padding: 0.1rem 0.2rem;
   background: var(--lightgray);
+}
+
+// Long words break only where they would not fit, so a phone does not scroll sideways: a page
+// title such as "ObsidianFlavoredMarkdown", or `configuration.links.disableBrokenWikilinks` in a
+// callout. Inline code takes `anywhere`, which also lets the box around it shrink (with
+// `break-word` the callout widened to the identifier instead). Code blocks keep scrolling.
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+:not(pre) > code {
+  overflow-wrap: anywhere;
 }
 
 tbody,

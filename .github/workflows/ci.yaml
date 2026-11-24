@@ -2,22 +2,32 @@ name: Build and Test
 
 on:
   pull_request:
-    branches:
-      - v5
+    branches: [main]
   push:
-    branches:
-      - v5
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
-    if: ${{ github.repository == 'jackyzha0/quartz' }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            node: 22
+          - os: ubuntu-latest
+            node: 24
+          - os: windows-latest
+            node: 24
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
         with:
@@ -26,58 +36,44 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: ${{ matrix.node }}
+          cache: npm
 
-      - name: Cache dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Cache Quartz plugins
+      - name: Cache pinned Quartz plugins
         uses: actions/cache@v5
         with:
           path: .quartz/plugins
-          key: ${{ runner.os }}-plugins-${{ hashFiles('quartz.lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-plugins-
+          key: ${{ runner.os }}-node-${{ matrix.node }}-plugins-v2-${{ hashFiles('quartz.lock.json', 'package-lock.json') }}
 
       - run: npm ci
 
-      - name: Install Quartz plugins
-        run: npx quartz plugin install
-
+      # precheck restores the exact Git commits in quartz.lock.json.
       - name: Check types and style
         run: npm run check
 
-      - name: Test
+      - name: Unit and local Git integration tests
         run: npm test
 
-      - name: Ensure Quartz builds, check bundle info
-        run: npx quartz build --bundleInfo -d docs
+      - name: Build and verify the synthetic site
+        run: npm run test:smoke
 
-  publish-tag:
-    if: ${{ github.repository == 'jackyzha0/quartz' && github.ref == 'refs/heads/v5' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v6
+      - name: Install Chromium
+        if: runner.os == 'Linux' && matrix.node == 24
+        run: |
+          npx playwright install --with-deps chromium
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Browser regression tests
+        if: runner.os == 'Linux' && matrix.node == 24
+        run: npm run test:e2e
+
+      - name: Upload browser report and review screenshots
+        if: ${{ !cancelled() && runner.os == 'Linux' && matrix.node == 24 }}
+        uses: actions/upload-artifact@v6
         with:
-          fetch-depth: 0
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - name: Get package version
-        run: node -p -e '`PACKAGE_VERSION=${require("./package.json").version}`' >> $GITHUB_ENV
-      - name: Create release tag
-        uses: pkgdeps/git-tag-action@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          github_repo: ${{ github.repository }}
-          version: ${{ env.PACKAGE_VERSION }}
-          git_commit_sha: ${{ github.sha }}
-          git_tag_prefix: "v"
+          name: browser-regression-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

@@ -5,6 +5,7 @@ import type {
   QuartzComponentConstructor,
   QuartzComponentProps,
 } from "@quartz-community/types"
+import type { BuildCtx } from "../../../../quartz/util/ctx"
 import {
   loadExplorerFolderIcons,
   publishedFolderSlugsFromFiles,
@@ -151,7 +152,8 @@ export const ExplorerFolderIcons: QuartzComponentConstructor<ExplorerFolderIcons
   const dataPath = options?.dataPath ?? defaultDataPath
 
   const ExplorerFolderIconsComponent: QuartzComponent = (props: QuartzComponentProps) => {
-    const contentRoot = path.resolve(props.ctx.argv.directory)
+    const ctx = props.ctx as BuildCtx
+    const contentRoot = path.resolve(ctx.argv.directory)
     const publishedFolders = publishedFolderSlugsFromFiles(props.allFiles)
     const key = cacheKey(contentRoot, dataPath, publishedFolders)
 
