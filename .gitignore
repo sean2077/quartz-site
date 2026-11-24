@@ -28,3 +28,4 @@ content/
 # Browser regression output
 playwright-report/
 test-results/
+.agent-scaffold-symlink-*/
