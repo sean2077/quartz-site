@@ -59,10 +59,10 @@ const css = `
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(180, 175, 165, 0.18);
+  background: rgba(180, 175, 165, 0.1);
 }
 :root[saved-theme="dark"] .dynamic-background::after {
-  background: rgba(24, 24, 30, 0.3);
+  background: rgba(24, 24, 30, 0.2);
 }
 ${imageRules(1600)}
 @media (max-width: 800px) {

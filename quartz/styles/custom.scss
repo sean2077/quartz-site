@@ -3,15 +3,31 @@
 // Site appearance lives here. The background component only owns its artwork
 // and clock, so disabling it does not silently change the reading layout.
 :root {
-  --surface-reading: color-mix(in srgb, var(--light) 92%, transparent);
-  --surface-sidebar: color-mix(in srgb, var(--light) 84%, transparent);
+  --surface-reading: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--light) 95%, var(--secondary) 5%) 88%,
+    transparent
+  );
+  --surface-sidebar: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--light) 93%, var(--secondary) 7%) 78%,
+    transparent
+  );
   --surface-border: color-mix(in srgb, var(--lightgray) 82%, var(--secondary));
   --surface-shadow: 0 8px 28px rgb(30 30 35 / 6%);
 }
 
 :root[saved-theme="dark"] {
-  --surface-reading: color-mix(in srgb, var(--light) 94%, transparent);
-  --surface-sidebar: color-mix(in srgb, var(--light) 88%, transparent);
+  --surface-reading: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--light) 94%, var(--secondary) 6%) 90%,
+    transparent
+  );
+  --surface-sidebar: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--light) 92%, var(--secondary) 8%) 84%,
+    transparent
+  );
   --surface-shadow: 0 8px 28px rgb(0 0 0 / 16%);
 }
 
@@ -29,12 +45,12 @@ body {
 .page {
   box-sizing: border-box;
   max-width: 1680px;
-  padding: 0.5rem;
+  padding: 0.25rem;
 }
 
 .page > #quartz-body {
-  column-gap: 0.5rem;
-  row-gap: 0.5rem;
+  column-gap: 0.25rem;
+  row-gap: 0.25rem;
 
   > .center {
     grid-area: grid-center;
@@ -70,8 +86,8 @@ body {
     background: var(--surface-sidebar);
     border: 1px solid var(--surface-border);
     border-radius: 12px;
-    height: calc(100dvh - 1rem);
-    top: 0.5rem;
+    height: calc(100dvh - 0.5rem);
+    top: 0.25rem;
   }
 
   > footer {
@@ -351,7 +367,7 @@ body {
 
   .page > #quartz-body {
     padding: 0;
-    gap: 0.75rem;
+    gap: 0.5rem;
 
     > .center {
       padding: 1rem;
