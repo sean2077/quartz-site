@@ -30,11 +30,16 @@ const test = base.extend<{ browserLog: BrowserLog }>({
   ],
 })
 
+function pageArticleTitle(page: Page) {
+  // Hover previews also carry `.article-title`; scope assertions to the page body.
+  return page.locator(".center .article-title")
+}
+
 async function openNotebook(page: Page, theme: "light" | "dark" = "light") {
   await page.emulateMedia({ colorScheme: theme })
   await page.addInitScript((value) => localStorage.setItem("theme", value), theme)
   await page.goto("/", { waitUntil: "domcontentloaded" })
-  await expect(page.locator(".article-title")).toHaveText("阅读与记录")
+  await expect(pageArticleTitle(page)).toHaveText("阅读与记录")
   await expect(page.locator("html")).toHaveAttribute("saved-theme", theme)
   await expect(page.locator(".base-paginated-table")).toHaveAttribute("data-initialized", "true")
 }
@@ -273,11 +278,11 @@ test("SPA navigation and Back restore the complete Bases dataset and fresh contr
     .first()
     .click()
   await expect(page).toHaveURL(/\/notes\/reading$/)
-  await expect(page.locator(".article-title")).toHaveText("阅读与思考")
+  await expect(pageArticleTitle(page)).toHaveText("阅读与思考")
   await expect(page.locator("html")).toHaveAttribute("data-smoke-document", "same")
 
   await page.goBack()
-  await expect(page.locator(".article-title")).toHaveText("阅读与记录")
+  await expect(pageArticleTitle(page)).toHaveText("阅读与记录")
   await expect(page.locator("html")).toHaveAttribute("data-smoke-document", "same")
   await expect(paginated(page)).toHaveAttribute("data-initialized", "true")
   await expectRanks(
@@ -307,9 +312,9 @@ test("site search opens a local result and returns without a document reload", a
     .evaluate((element) => element.setAttribute("data-smoke-document", "search"))
   await result.click()
   await expect(page).toHaveURL(/\/samples\/note-45$/)
-  await expect(page.locator(".article-title")).toHaveText("Sample 45")
+  await expect(pageArticleTitle(page)).toHaveText("Sample 45")
   await expect(page.locator("html")).toHaveAttribute("data-smoke-document", "search")
   await page.goBack()
-  await expect(page.locator(".article-title")).toHaveText("阅读与记录")
+  await expect(pageArticleTitle(page)).toHaveText("阅读与记录")
   await expect(paginated(page)).toHaveAttribute("data-initialized", "true")
 })
