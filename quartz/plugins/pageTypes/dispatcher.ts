@@ -4,7 +4,7 @@ import { pageResources, renderPage } from "../../components/renderPage"
 import { FullPageLayout } from "../../cfg"
 import { FilePath, FullSlug, joinSegments, pathToRoot, slugifyFilePath } from "../../util/path"
 import { ProcessedContent, defaultProcessedContent } from "../vfile"
-import { write } from "../emitters/helpers"
+import { folderIndexHtmlAlias, write } from "../emitters/helpers"
 import { BuildCtx, trieFromAllFiles } from "../../util/ctx"
 import { StaticResources } from "../../util/resources"
 import { render } from "preact-render-to-string"
@@ -131,6 +131,8 @@ export async function removeStalePageOutput(
 
   const outputPath = pageOutputPath(outputDir, sourcePath, slug)
   await fs.promises.rm(outputPath, { force: true })
+  const alias = folderIndexHtmlAlias(slug, ".html")
+  if (alias) await fs.promises.rm(joinSegments(outputDir, alias), { force: true })
   return outputPath
 }
 

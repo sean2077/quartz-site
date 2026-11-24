@@ -43,6 +43,35 @@ describe("hasCloudflareHtmlAliasHeaders", () => {
 })
 
 describe("write", () => {
+  test("concurrent writes share directories and a fresh build recreates cleaned output", async () => {
+    const output = await mkdtemp(join(tmpdir(), "quartz-rebuild-"))
+    const firstBuild = { argv: { output } } as BuildCtx
+    try {
+      await Promise.all(
+        Array.from({ length: 16 }, (_, i) =>
+          write({
+            ctx: firstBuild,
+            slug: `nested/page-${i}` as FullSlug,
+            ext: ".html",
+            content: `page ${i}`,
+          }),
+        ),
+      )
+      assert.equal(await readFile(join(output, "nested/page-15.html"), "utf8"), "page 15")
+      await rm(output, { recursive: true })
+      const nextBuild = { argv: { output } } as BuildCtx
+      await write({
+        ctx: nextBuild,
+        slug: "nested/page-0" as FullSlug,
+        ext: ".html",
+        content: "rebuilt",
+      })
+      assert.equal(await readFile(join(output, "nested/page-0.html"), "utf8"), "rebuilt")
+    } finally {
+      await rm(output, { recursive: true, force: true })
+    }
+  })
+
   test("writes folder index HTML aliases and Cloudflare headers", async () => {
     const output = await mkdtemp(join(tmpdir(), "quartz-write-"))
     const ctx = { argv: { output } } as BuildCtx

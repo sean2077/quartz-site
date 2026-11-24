@@ -22,7 +22,12 @@ import { getStaticResourcesFromPlugins } from "./plugins"
 import { randomIdNonSecure } from "./util/random"
 import { ChangeEvent } from "./plugins/types"
 import { minimatch } from "minimatch"
-import { ChangeRecord, clearChangeRecord } from "./util/incremental"
+import {
+  ChangeRecord,
+  ContentMap,
+  applyContentChanges,
+  clearChangeRecord,
+} from "./util/incremental"
 import { diffContentFiles, pollingEnabled } from "./util/contentWatcher"
 
 function reportSlugCollisions(content: ProcessedContent[]): void {
@@ -30,17 +35,6 @@ function reportSlugCollisions(content: ProcessedContent[]): void {
   if (collisions.length === 0) return
   console.warn(styleText("yellow", formatCollisionWarning(collisions)))
 }
-
-type ContentMap = Map<
-  FilePath,
-  | {
-      type: "markdown"
-      content: ProcessedContent
-    }
-  | {
-      type: "other"
-    }
->
 
 type BuildData = {
   ctx: BuildCtx
@@ -180,8 +174,10 @@ async function startWatching(
   })
 
   const changes: ChangeEvent[] = []
+  let disposed = false
   let rebuildTimeout: ReturnType<typeof setTimeout> | null = null
   const scheduleRebuild = () => {
+    if (disposed) return
     if (rebuildTimeout) clearTimeout(rebuildTimeout)
     rebuildTimeout = setTimeout(() => {
       rebuildTimeout = null
@@ -192,6 +188,7 @@ async function startWatching(
   }
 
   const recordChange = (fp: string, type: ChangeEvent["type"]) => {
+    if (disposed) return
     const relativePath = toPosixPath(
       path.isAbsolute(fp) ? path.relative(contentRoot, fp) : fp,
     ) as FilePath
@@ -230,10 +227,11 @@ async function startWatching(
     )
     let scanInProgress = false
     const reconcileFileList = async () => {
-      if (scanInProgress) return
+      if (disposed || scanInProgress) return
       scanInProgress = true
       try {
         const scannedFiles = await glob("**/*.*", argv.directory, cfg.configuration.ignorePatterns)
+        if (disposed) return
         const currentFiles = new Set(scannedFiles)
         const { added, deleted } = diffContentFiles(knownFiles, currentFiles)
 
@@ -243,6 +241,7 @@ async function startWatching(
         }
 
         for (const fp of deleted) {
+          if (disposed) return
           await watcher.unwatch(path.resolve(contentRoot, fp))
           recordChange(fp, "delete")
         }
@@ -262,6 +261,8 @@ async function startWatching(
   }
 
   return async () => {
+    disposed = true
+    if (rebuildTimeout) clearTimeout(rebuildTimeout)
     if (discoveryTimer) clearInterval(discoveryTimer)
     await watcher.close()
   }
@@ -312,41 +313,8 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
       })
     }
 
-    // update state using changesSinceLastBuild
-    // we do this weird play of add => compute change events => remove
-    // so that partialEmitters can do appropriate cleanup based on the content of deleted files
-    for (const [file, change] of Object.entries(changesSinceLastBuild)) {
-      if (change === "delete") {
-        // universal delete case
-        contentMap.delete(file as FilePath)
-      }
-
-      // manually track non-markdown files as processed files only
-      // contains markdown files
-      if (change === "add" && path.extname(file) !== ".md") {
-        contentMap.set(file as FilePath, {
-          type: "other",
-        })
-      }
-    }
-
-    const changeEvents: ChangeEvent[] = Object.entries(changesSinceLastBuild).map(([fp, type]) => {
-      const path = fp as FilePath
-      const processedContent = contentMap.get(path)
-      if (processedContent?.type === "markdown") {
-        const [_tree, file] = processedContent.content
-        return {
-          type,
-          path,
-          file,
-        }
-      }
-
-      return {
-        type,
-        path,
-      }
-    })
+    // Snapshot deleted notes before removing them, so emitters retain their real output slugs.
+    const changeEvents = applyContentChanges(contentMap, changesSinceLastBuild)
 
     // update allFiles and then allSlugs with the consistent view of content map
     ctx.allFiles = Array.from(contentMap.keys())
