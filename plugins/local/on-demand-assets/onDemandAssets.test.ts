@@ -79,6 +79,26 @@ describe("OnDemandAssets", () => {
     }
   })
 
+  test("literal basenames resolve even when another file slugifies to the same name", async () => {
+    const input = await mkdtemp(join(tmpdir(), "quartz-assets-literal-"))
+    try {
+      await mkdir(join(input, "attachments"))
+      await writeFile(join(input, "attachments", "image 1.png"), "spaced")
+      await writeFile(join(input, "attachments", "image-1.png"), "hyphenated")
+      await writeFile(join(input, "attachments", "Pasted image 2.png"), "slug only")
+      const ctx = createContext(input)
+      const assetMap = await getAllAssets(ctx.argv, ctx.cfg)
+
+      // A unique literal file name wins over a colliding slug alias.
+      assert.equal(resolveAsset("image-1.png", assetMap), "attachments/image-1.png")
+      assert.equal(resolveAsset("image 1.png", assetMap), "attachments/image 1.png")
+      // Files without a stable literal alias still resolve through their slug.
+      assert.equal(resolveAsset("pasted-image-2.png", assetMap), "attachments/Pasted image 2.png")
+    } finally {
+      await rm(input, { recursive: true, force: true })
+    }
+  })
+
   test("prefers a decoded exact path over a different basename alias", () => {
     const assetMap = new Map<string, FilePath>([
       ["manual.pdf", "other/manual.pdf" as FilePath],

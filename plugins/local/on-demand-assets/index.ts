@@ -52,13 +52,16 @@ export async function getAllAssets(argv: Argv, cfg: QuartzConfig): Promise<Map<s
     "**/*.md",
     ...(cfg.configuration.ignorePatterns ?? []),
   ])
-  // Exact vault paths take precedence over convenience aliases. Basenames and
-  // slug aliases are usable only when they identify one source file.
+  // Exact vault paths take precedence over convenience aliases. Aliases are
+  // resolved in two tiers: literal file names first, then slugified paths.
+  // Keeping them apart matters when a literal name also appears as another
+  // file's slug: `image 1.png` slugifies to `image-1.png`, so one shared alias
+  // table would hide the real `image-1.png` as an ambiguous match.
   const assetMap = new Map<string, FilePath>(files.map((fp) => [fp, fp]))
-  const aliases = new Map<string, FilePath | null>()
+  const basenames = new Map<string, FilePath | null>()
+  const slugAliases = new Map<string, FilePath | null>()
 
-  const addAlias = (alias: string, fp: FilePath) => {
-    if (assetMap.has(alias)) return
+  const addAlias = (aliases: Map<string, FilePath | null>, alias: string, fp: FilePath) => {
     if (!aliases.has(alias)) {
       aliases.set(alias, fp)
     } else if (aliases.get(alias) !== fp) {
@@ -68,13 +71,14 @@ export async function getAllAssets(argv: Argv, cfg: QuartzConfig): Promise<Map<s
 
   for (const fp of files) {
     const slugifiedPath = slugifyFilePath(fp)
-    addAlias(path.posix.basename(fp), fp)
-    addAlias(path.posix.basename(slugifiedPath), fp)
-    addAlias(slugifiedPath, fp)
+    addAlias(basenames, path.posix.basename(fp), fp)
+    addAlias(slugAliases, path.posix.basename(slugifiedPath), fp)
+    addAlias(slugAliases, slugifiedPath, fp)
   }
 
-  for (const [alias, fp] of aliases) {
-    if (fp !== null) assetMap.set(alias, fp)
+  // An alias may not shadow an exact vault path or a higher-priority alias.
+  for (const [alias, fp] of [...basenames, ...slugAliases]) {
+    if (fp !== null && !assetMap.has(alias)) assetMap.set(alias, fp)
   }
 
   return assetMap
