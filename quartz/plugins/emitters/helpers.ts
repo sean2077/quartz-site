@@ -11,6 +11,29 @@ type WriteOptions = {
   content: string | Buffer | Readable
 }
 
+// A new BuildCtx starts each full rebuild, after output has been cleaned. Cache
+// in-flight mkdir promises per build so concurrent emitters share the work without
+// retaining stale directories across rebuilds in the same process.
+const ensuredDirs = new WeakMap<BuildCtx, Map<string, Promise<string | undefined>>>()
+
+function ensureDirectory(ctx: BuildCtx, dir: string): Promise<string | undefined> {
+  let directories = ensuredDirs.get(ctx)
+  if (!directories) {
+    directories = new Map()
+    ensuredDirs.set(ctx, directories)
+  }
+
+  let ensured = directories.get(dir)
+  if (!ensured) {
+    ensured = fs.promises.mkdir(dir, { recursive: true }).catch((error) => {
+      directories.delete(dir)
+      throw error
+    })
+    directories.set(dir, ensured)
+  }
+  return ensured
+}
+
 const cloudflareHtmlAliasHeaderPath = "/*/index"
 const cloudflareHtmlAliasHeaderValue = "Content-Type: text/html; charset=utf-8"
 const cloudflareHtmlAliasHeaders = `${cloudflareHtmlAliasHeaderPath}
@@ -52,14 +75,14 @@ async function ensureCloudflareHtmlAliasHeaders(ctx: BuildCtx): Promise<void> {
 
   const next = existing.trimEnd()
   const content = next ? `${next}\n\n${cloudflareHtmlAliasHeaders}` : cloudflareHtmlAliasHeaders
-  await fs.promises.mkdir(path.dirname(headersPath), { recursive: true })
+  await ensureDirectory(ctx, path.dirname(headersPath))
   await fs.promises.writeFile(headersPath, content)
 }
 
 export const write = async ({ ctx, slug, ext, content }: WriteOptions): Promise<FilePath> => {
   const pathToPage = joinSegments(ctx.argv.output, slug + ext) as FilePath
   const dir = path.dirname(pathToPage)
-  await fs.promises.mkdir(dir, { recursive: true })
+  await ensureDirectory(ctx, dir)
   await fs.promises.writeFile(pathToPage, content)
 
   const aliasSlug = folderIndexHtmlAlias(slug, ext)
