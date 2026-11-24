@@ -2,7 +2,7 @@ import { QuartzEmitterPlugin, QuartzPageTypePluginInstance, TreeTransform } from
 import { QuartzComponent, QuartzComponentProps } from "../../components/types"
 import { pageResources, renderPage } from "../../components/renderPage"
 import { FullPageLayout } from "../../cfg"
-import { FilePath, FullSlug, pathToRoot } from "../../util/path"
+import { FilePath, FullSlug, joinSegments, pathToRoot, slugifyFilePath } from "../../util/path"
 import { ProcessedContent, defaultProcessedContent } from "../vfile"
 import { write } from "../emitters/helpers"
 import { BuildCtx, trieFromAllFiles } from "../../util/ctx"
@@ -10,6 +10,8 @@ import { StaticResources } from "../../util/resources"
 import { render } from "preact-render-to-string"
 import { fromHtml } from "hast-util-from-html"
 import { Root as HtmlRoot } from "hast"
+import fs from "fs"
+import path from "path"
 
 function getPageTypes(ctx: BuildCtx): QuartzPageTypePluginInstance[] {
   return (ctx.cfg.plugins.pageTypes ?? []) as unknown as QuartzPageTypePluginInstance[]
@@ -105,6 +107,31 @@ async function emitPage(
     slug,
     ext: ".html",
   })
+}
+
+/** @internal Exported for testing only. */
+export function pageOutputPath(
+  outputDir: string,
+  sourcePath: FilePath,
+  fileSlug?: FullSlug,
+): FilePath {
+  const slug = fileSlug ?? slugifyFilePath(sourcePath)
+  return joinSegments(outputDir, `${slug}.html`) as FilePath
+}
+
+/** @internal Exported for testing only. */
+export async function removeStalePageOutput(
+  outputDir: string,
+  sourcePath: FilePath,
+  currentSlugs: ReadonlySet<FullSlug>,
+  fileSlug?: FullSlug,
+): Promise<FilePath | undefined> {
+  const slug = fileSlug ?? slugifyFilePath(sourcePath)
+  if (currentSlugs.has(slug)) return
+
+  const outputPath = pageOutputPath(outputDir, sourcePath, slug)
+  await fs.promises.rm(outputPath, { force: true })
+  return outputPath
 }
 
 /**
@@ -257,11 +284,23 @@ export const PageTypeDispatcher: QuartzEmitterPlugin<Partial<DispatcherOptions>>
       // Rebuild trie on partial emit to reflect file changes
       ctx.trie = trieFromAllFiles(allFiles)
 
+      const currentSlugs = new Set(
+        allFiles.flatMap((file) => (file.slug ? [file.slug] : [])),
+      ) as Set<FullSlug>
       const changedSlugs = new Set<string>()
       for (const changeEvent of changeEvents) {
-        if (!changeEvent.file) continue
+        if (path.extname(changeEvent.path).toLowerCase() === ".md") {
+          await removeStalePageOutput(
+            ctx.argv.output,
+            changeEvent.path,
+            currentSlugs,
+            changeEvent.file?.data.slug,
+          )
+        }
+
         if (changeEvent.type === "add" || changeEvent.type === "change") {
-          changedSlugs.add(changeEvent.file.data.slug!)
+          const slug = changeEvent.file?.data.slug
+          if (slug) changedSlugs.add(slug)
         }
       }
 
