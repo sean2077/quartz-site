@@ -24,3 +24,7 @@ content/
 .claude/settings.local.json
 .worktrees/
 .claude/allow-trunk-edit
+
+# Browser regression output
+playwright-report/
+test-results/

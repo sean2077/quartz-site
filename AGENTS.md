@@ -7,7 +7,9 @@ This repository is sean2077's Quartz v5 fork. The `obsidian-vault/` path is a sy
 ## Development Commands
 
 - Run `npm run check` for TypeScript and formatting validation.
-- Run `npm test` for the test suite.
+- Run `npm test` for the test suite. `scripts/run-tests.mjs` explicitly discovers `.test.ts`/`.test.js` files under `quartz/` and `plugins/local/` on all supported Node versions.
+- Run `npm run test:smoke` to build and verify synthetic notes without the independent vault. Preview output is `.quartz/smoke-public/`.
+- After the smoke build, run `npm run test:e2e` for browser regressions; install Chromium once with `npx playwright install chromium`. Reports and screenshots are generated and must not be committed.
 - Run `npm run build` to build `obsidian-vault/` into generated `public/` output.
 - For any publication-scope audit or production deployment, use the project-owned `quartz-safe-deploy` skill and keep build, privacy gates, and upload as separate actions.
 
