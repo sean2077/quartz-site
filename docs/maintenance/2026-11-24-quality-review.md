@@ -91,7 +91,7 @@ TypeScript 使用 `moduleResolution: bundler` 与实际 esbuild 构建方式一�
 
 阅读面板提高不透明度，常规文章限制正文宽度为 52rem；桌面、平板、手机分别采用三列、两列和单列。代码块、分隔线、标题、正文行距和键盘焦点使用一致的站点样式。去除正文容器的 backdrop-filter，避免它把 fixed 控件定位基准变为容器。
 
-移动目录采用原生 `dialog.showModal()`，提供焦点约束、Escape 关闭、打开按钮焦点恢复、44px 触摸目标、安全区和动态视口适配；点目录链接、点遮罩、切换为桌面宽度和 SPA 清理均恢复滚动状态。支持 reduced-motion、reduced-transparency 和打印场景。
+移动目录采用原生 `dialog.showModal()`，提供 inert、Escape 关闭、打开按钮焦点恢复、44px 触摸目标、安全区和动态视口适配；首尾的 Tab／Shift+Tab 另做局部循环，避免 Chromium 将焦点交给浏览器界面。点目录链接、点遮罩、切换为桌面宽度和 SPA 清理均恢复滚动状态。支持 reduced-motion、reduced-transparency 和打印场景。
 
 ## 验证与复现
 
@@ -106,10 +106,10 @@ npm run test:e2e
 
 `npm run check` 的 precheck 安装锁定插件；smoke 输出在 `.quartz/smoke-public/`。完整源码、测试和固定图片属于 Git；生成内容、浏览器报告和截图不提交。
 
-- 当前本地 Node 24.22.3：223 个单元／集成测试通过；TypeScript 与全仓格式检查通过。测试 runner 显式传入所有文件，Node 22 的验证以 CI 为准。
+- 当前本地 Node 24.22.3：225 个单元／集成测试通过；TypeScript 与全仓格式检查通过。测试 runner 显式传入所有文件，Node 22 的验证以 CI 为准。
 - 合成站点包含 54 个索引页：检查 Folder Note 与扩展名为空的 alias、正文／搜索／附件的未发布排除、45 行分页 SSR 回退，以及第二个视图恰好 3 行且 rank 为 44、42、40。
 - CI 在 Ubuntu Node 22、Ubuntu Node 24、Windows Node 24 运行类型／格式／测试／合成构建；Ubuntu Node 24 额外执行 Chromium 浏览器回归，并上传报告与可审查截图。
-- 浏览器测试覆盖响应式布局、主题、分页与搜索、独立视图、目录焦点与关闭、SPA 返回和 WebP 选择；浏览器结果以 PR 的 Actions 记录为准。
+- 浏览器测试覆盖响应式布局、主题、分页与搜索、独立视图、目录焦点与关闭、SPA 返回和 WebP 选择；浏览器结果以 PR 的 Actions 记录为准。为保证确定性，测试阻止外部请求，采用系统 Noto CJK 字体；外部字体、分析服务与图谱 CDN 未纳入该套测试，截图中的图谱为加载失败的回退状态。
 
 工作环境未连接独立 `obsidian-vault`，没有执行真实内容构建或部署。工作区 Chromium 被运行环境限制，远程浏览器也无法访问工作区预览，所以本地没有浏览器通过或性能跑分的结论。真实 vault 的内容特例仍需在发布流程中用项目既有 `quartz-safe-deploy` 检查。
 

@@ -23,8 +23,8 @@ function setupMobileToc() {
   }
   const openToc = () => {
     if (!mobileViewport.matches || panel.open) return
-    // Native modal dialogs handle focus trapping and make the rest of the page
-    // inert, including when this component is rendered inside a reading surface.
+    // Native dialogs provide an inert background, Escape and focus restoration,
+    // including when rendered inside a reading surface.
     panel.showModal()
     previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -46,13 +46,29 @@ function setupMobileToc() {
     if (event.clientX < bounds.left || event.clientX > bounds.right ||
         event.clientY < bounds.top || event.clientY > bounds.bottom) closeToc()
   }
+  const tocLinks = panel.querySelectorAll("a[href]")
+  const cycleFocusAtBoundary = (event) => {
+    if (!panel.open || event.key !== "Tab" || event.defaultPrevented ||
+        event.altKey || event.ctrlKey || event.metaKey) return
+    const first = closeBtn ?? tocLinks[0]
+    const last = tocLinks[tocLinks.length - 1] ?? closeBtn
+    // Keep end-of-list Tab navigation inside the sheet instead of transferring
+    // focus to browser chrome. Leave all intermediate navigation native.
+    if (event.shiftKey && document.activeElement === first && last) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last && first) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
 
   toggleBtn.addEventListener("click", openToc)
   closeBtn?.addEventListener("click", closeToc)
   panel.addEventListener("click", closeOnBackdrop)
   panel.addEventListener("close", handleClose)
+  panel.addEventListener("keydown", cycleFocusAtBoundary)
   mobileViewport.addEventListener("change", closeOnDesktop)
-  const tocLinks = panel.querySelectorAll("a")
   tocLinks.forEach((link) => link.addEventListener("click", closeToc))
 
   const handleScroll = () => {
@@ -74,6 +90,7 @@ function setupMobileToc() {
     closeBtn?.removeEventListener("click", closeToc)
     panel.removeEventListener("click", closeOnBackdrop)
     panel.removeEventListener("close", handleClose)
+    panel.removeEventListener("keydown", cycleFocusAtBoundary)
     mobileViewport.removeEventListener("change", closeOnDesktop)
     tocLinks.forEach((link) => link.removeEventListener("click", closeToc))
     window.removeEventListener("scroll", handleScroll)

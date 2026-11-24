@@ -7,6 +7,7 @@ import type { QuartzComponentProps } from "@quartz-community/types"
 import { MobileToc, mobileTocScript } from "./index.ts"
 
 class Control extends EventTarget {
+  onFocus?: () => void
   attributes = new Map<string, string>()
   classes = new Set<string>()
   classList = {
@@ -21,12 +22,16 @@ class Control extends EventTarget {
   click() {
     this.dispatchEvent(new Event("click"))
   }
+  focus() {
+    this.onFocus?.()
+  }
 }
 
 function setup() {
   const toggle = new Control()
   const close = new Control()
   const top = new Control()
+  const middleLink = new Control()
   const link = new Control()
   class Dialog extends Control {
     open = false
@@ -41,7 +46,7 @@ function setup() {
       return { top: 400, left: 0, right: 390, bottom: 844 }
     }
     querySelectorAll() {
-      return [link]
+      return [middleLink, link]
     }
   }
   const panel = new Dialog()
@@ -52,9 +57,15 @@ function setup() {
     [".mobile-back-to-top", top],
   ])
   const document = Object.assign(new EventTarget(), {
+    activeElement: null as Control | null,
     body: { style: { overflow: "auto" } },
     querySelector: (selector: string) => elements.get(selector),
   })
+  for (const control of [toggle, close, top, middleLink, link]) {
+    control.onFocus = () => {
+      document.activeElement = control
+    }
+  }
   const viewport = Object.assign(new EventTarget(), { matches: true })
   const motion = { matches: false }
   const cleanups: Array<() => void> = []
@@ -67,7 +78,30 @@ function setup() {
   })
   runInNewContext(mobileTocScript, { document, window })
   document.dispatchEvent(new Event("nav"))
-  return { toggle, close, top, link, panel, document, viewport, motion, cleanups, scrolls, window }
+  return {
+    toggle,
+    close,
+    top,
+    middleLink,
+    link,
+    panel,
+    document,
+    viewport,
+    motion,
+    cleanups,
+    scrolls,
+    window,
+  }
+}
+
+function keydown(target: EventTarget, key: string, shiftKey = false, ctrlKey = false) {
+  const event = Object.assign(new Event("keydown", { cancelable: true }), {
+    key,
+    shiftKey,
+    ctrlKey,
+  })
+  target.dispatchEvent(event)
+  return event
 }
 
 test("mobile TOC exposes a named native dialog and localized controls", () => {
@@ -143,4 +177,42 @@ test("SPA cleanup closes the sheet and removes handlers; reduced motion skips sm
   top.click()
   assert.equal(panel.open, false)
   assert.equal(scrolls.length, 2)
+})
+
+test("Tab and Shift+Tab wrap only at the open TOC's focus boundaries", () => {
+  const { toggle, close, middleLink, link, panel, document } = setup()
+  toggle.click()
+  link.focus()
+  assert.equal(keydown(panel, "Tab").defaultPrevented, true)
+  assert.equal(document.activeElement, close)
+  assert.equal(keydown(panel, "Tab", true).defaultPrevented, true)
+  assert.equal(document.activeElement, link)
+
+  // Intermediate focus movement remains the browser's responsibility.
+  middleLink.focus()
+  assert.equal(keydown(panel, "Tab").defaultPrevented, false)
+  assert.equal(keydown(panel, "Tab", true).defaultPrevented, false)
+  assert.equal(document.activeElement, middleLink)
+  close.focus()
+  assert.equal(keydown(panel, "Tab").defaultPrevented, false)
+  link.focus()
+  assert.equal(keydown(panel, "Tab", true).defaultPrevented, false)
+})
+
+test("focus cycling ignores other keys, closed dialogs and disposed listeners", () => {
+  const { toggle, link, panel, document, cleanups } = setup()
+  toggle.click()
+  link.focus()
+  assert.equal(keydown(panel, "Escape").defaultPrevented, false)
+  assert.equal(keydown(panel, "Enter").defaultPrevented, false)
+  assert.equal(keydown(panel, "Tab", false, true).defaultPrevented, false)
+  assert.equal(document.activeElement, link)
+
+  panel.close()
+  assert.equal(keydown(panel, "Tab").defaultPrevented, false)
+  assert.equal(document.activeElement, link)
+  cleanups.forEach((cleanup) => cleanup())
+  panel.showModal()
+  assert.equal(keydown(panel, "Tab").defaultPrevented, false)
+  assert.equal(document.activeElement, link)
 })
