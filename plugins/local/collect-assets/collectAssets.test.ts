@@ -8,11 +8,17 @@ describe("CollectAssets helpers", () => {
 
   test("accepts local asset references with query strings", () => {
     assert.equal(isLocalAsset("9Z 系统区/附件/a.png?size=400", extensions), true)
+    assert.equal(isLocalAsset("attachments/manual.pdf#page=4", extensions), true)
+    assert.equal(isLocalAsset("attachments/diagram.png#detail", extensions), true)
+    assert.equal(isLocalAsset("attachments/diagram%2Epng", extensions), true)
   })
 
   test("rejects external and data URLs", () => {
     assert.equal(isLocalAsset("https://example.com/a.png", extensions), false)
     assert.equal(isLocalAsset("data:image/png;base64,aaa", extensions), false)
+    assert.equal(isLocalAsset("HTTPS://example.com/a.png", extensions), false)
+    assert.equal(isLocalAsset("mailto:attachment.png", extensions), false)
+    assert.equal(isLocalAsset("#diagram.png", extensions), false)
   })
 
   test("normalizes encoded leading-slash paths", () => {
@@ -44,6 +50,30 @@ describe("CollectAssets helpers", () => {
     assert.equal(
       resolveAssetReference("notes/example" as FullSlug, "images/missing.png", new Map()),
       undefined,
+    )
+  })
+
+  test("resolves page-relative paths before vault-root and basename aliases", () => {
+    const assetMap = new Map<string, FilePath>([
+      ["image.png", "image.png" as FilePath],
+      ["notes/image.png", "Notes/image.png" as FilePath],
+      ["notes/nested/image.png", "Notes/nested/image.png" as FilePath],
+    ])
+
+    assert.deepEqual(
+      resolveAssetReference("notes/note" as FullSlug, "./image.png#detail", assetMap),
+      {
+        source: "Notes/image.png",
+        url: "../notes/image.png#detail",
+      },
+    )
+    assert.equal(
+      resolveAssetReference("notes/nested/note" as FullSlug, "../image.png", assetMap)?.source,
+      "Notes/image.png",
+    )
+    assert.equal(
+      resolveAssetReference("notes/note" as FullSlug, "/image.png", assetMap)?.source,
+      "image.png",
     )
   })
 })

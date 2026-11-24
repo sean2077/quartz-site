@@ -48,26 +48,33 @@ export function collectReferencedAssets(content: ProcessedContent[]): Set<string
 }
 
 export async function getAllAssets(argv: Argv, cfg: QuartzConfig): Promise<Map<string, FilePath>> {
-  const files = await glob("**", argv.directory, ["**/*.md", ...cfg.configuration.ignorePatterns])
-  const assetMap = new Map<string, FilePath>()
+  const files = await glob("**", argv.directory, [
+    "**/*.md",
+    ...(cfg.configuration.ignorePatterns ?? []),
+  ])
+  // Exact vault paths take precedence over convenience aliases. Basenames and
+  // slug aliases are usable only when they identify one source file.
+  const assetMap = new Map<string, FilePath>(files.map((fp) => [fp, fp]))
+  const aliases = new Map<string, FilePath | null>()
+
+  const addAlias = (alias: string, fp: FilePath) => {
+    if (assetMap.has(alias)) return
+    if (!aliases.has(alias)) {
+      aliases.set(alias, fp)
+    } else if (aliases.get(alias) !== fp) {
+      aliases.set(alias, null)
+    }
+  }
 
   for (const fp of files) {
-    assetMap.set(fp, fp)
-
-    const basename = path.basename(fp)
-    if (!assetMap.has(basename)) {
-      assetMap.set(basename, fp)
-    }
-
     const slugifiedPath = slugifyFilePath(fp)
-    const slugifiedBasename = path.posix.basename(slugifiedPath)
-    if (slugifiedBasename !== basename && !assetMap.has(slugifiedBasename)) {
-      assetMap.set(slugifiedBasename, fp)
-    }
+    addAlias(path.posix.basename(fp), fp)
+    addAlias(path.posix.basename(slugifiedPath), fp)
+    addAlias(slugifiedPath, fp)
+  }
 
-    if (slugifiedPath !== fp && !assetMap.has(slugifiedPath)) {
-      assetMap.set(slugifiedPath, fp)
-    }
+  for (const [alias, fp] of aliases) {
+    if (fp !== null) assetMap.set(alias, fp)
   }
 
   return assetMap
@@ -78,24 +85,15 @@ export function resolveAsset(ref: string, assetMap: Map<string, FilePath>): File
     return assetMap.get(ref)
   }
 
-  const basename = path.basename(ref)
-  if (assetMap.has(basename)) {
-    return assetMap.get(basename)
-  }
-
+  let decoded = ref
   try {
-    const decoded = decodeURIComponent(ref)
+    decoded = decodeURIComponent(ref)
     if (assetMap.has(decoded)) {
       return assetMap.get(decoded)
     }
-
-    const decodedBasename = path.basename(decoded)
-    if (assetMap.has(decodedBasename)) {
-      return assetMap.get(decodedBasename)
-    }
   } catch {}
 
-  return undefined
+  return assetMap.get(path.posix.basename(decoded))
 }
 
 async function copyFile(argv: Argv, fp: FilePath): Promise<FilePath> {
@@ -135,7 +133,7 @@ export const OnDemandAssets: QuartzEmitterPlugin<Partial<Options>> = (userOpts) 
       }
 
       for (const pattern of opts.alwaysInclude ?? []) {
-        const files = await glob(pattern, argv.directory, cfg.configuration.ignorePatterns)
+        const files = await glob(pattern, argv.directory, cfg.configuration.ignorePatterns ?? [])
         for (const fp of files) {
           if (!copiedAssets.has(fp)) {
             copiedAssets.add(fp)
@@ -182,7 +180,7 @@ export const OnDemandAssets: QuartzEmitterPlugin<Partial<Options>> = (userOpts) 
           const files = await glob(
             pattern,
             ctx.argv.directory,
-            ctx.cfg.configuration.ignorePatterns,
+            ctx.cfg.configuration.ignorePatterns ?? [],
           )
           for (const fp of files) {
             retainedAssets.add(fp)
@@ -194,8 +192,9 @@ export const OnDemandAssets: QuartzEmitterPlugin<Partial<Options>> = (userOpts) 
 
       const copyReferencedAssets = async function* (refs: Iterable<string>) {
         const resolvedAssets = await resolveReferencedAssets(refs)
+        const retained = await getRetainedAssets()
         for (const fp of resolvedAssets) {
-          if (!copiedAssets.has(fp)) {
+          if (retained.has(fp) && !copiedAssets.has(fp)) {
             copiedAssets.add(fp)
             yield copyFile(ctx.argv, fp)
           }

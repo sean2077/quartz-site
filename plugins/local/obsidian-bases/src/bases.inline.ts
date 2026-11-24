@@ -1,17 +1,17 @@
 // Obsidian Bases client-side interactivity
 
-document.addEventListener("nav", async () => {
+document.addEventListener("nav", () => {
   // Initialize tab switching for multi-view bases
   initTabSwitching()
-
-  // Initialize map views (if Leaflet is available)
-  await initMapViews()
 
   // Initialize client-side table sorting
   initTableSorting()
 
   // Initialize paginated tables
   initPaginatedTables()
+
+  // A slow map CDN must not delay table controls.
+  void initMapViews()
 })
 
 /**
@@ -186,20 +186,7 @@ function initTableSorting() {
           const aText = (aCell.querySelector("a")?.textContent || aCell.textContent || "").trim()
           const bText = (bCell.querySelector("a")?.textContent || bCell.textContent || "").trim()
 
-          // Try numeric comparison first
-          const aNum = parseFloat(aText)
-          const bNum = parseFloat(bText)
-
-          if (!isNaN(aNum) && !isNaN(bNum)) {
-            return newSort === "asc" ? aNum - bNum : bNum - aNum
-          }
-
-          // Fall back to string comparison
-          const comparison = aText.localeCompare(bText, undefined, {
-            numeric: true,
-            sensitivity: "base",
-          })
-          return newSort === "asc" ? comparison : -comparison
+          return naturalCompare(aText, bText, newSort)
         })
 
         // Re-append rows in sorted order
@@ -231,6 +218,8 @@ function debounce(fn: () => void, ms: number): { call: () => void; cancel: () =>
 /**
  * Natural sort comparison for table cells
  */
+const tableCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" })
+
 function naturalCompare(aText: string, bText: string, dir: "asc" | "desc"): number {
   // Empty values always sort to end
   if (!aText && !bText) return 0
@@ -238,16 +227,13 @@ function naturalCompare(aText: string, bText: string, dir: "asc" | "desc"): numb
   if (!bText) return -1
 
   // Try numeric comparison first
-  const aNum = parseFloat(aText)
-  const bNum = parseFloat(bText)
-  if (!isNaN(aNum) && !isNaN(bNum)) {
+  const aNum = Number(aText)
+  const bNum = Number(bText)
+  if (Number.isFinite(aNum) && Number.isFinite(bNum)) {
     return dir === "asc" ? aNum - bNum : bNum - aNum
   }
 
-  const comparison = aText.localeCompare(bText, undefined, {
-    numeric: true,
-    sensitivity: "base",
-  })
+  const comparison = tableCollator.compare(aText, bText)
   return dir === "asc" ? comparison : -comparison
 }
 
@@ -266,10 +252,21 @@ function initPaginatedTables() {
     const tbody: HTMLTableSectionElement = tbodyEl
 
     const allRows = Array.from(tbody.querySelectorAll("tr")) as HTMLTableRowElement[]
+    // Read the DOM once. Filtering and sorting work with cached values, even
+    // while off-page rows are detached from the live table.
+    const rowData = allRows.map((row) => ({
+      row,
+      searchable: row.dataset.searchable ?? "",
+      values: new Map(Array.from(row.cells, (cell) => [cell.dataset.col, cell.dataset.value])),
+      sortValues: Array.from(row.cells, (cell) =>
+        (cell.querySelector("a")?.textContent || cell.textContent || "").trim(),
+      ),
+    }))
+    let visibleRows = rowData
 
     // State
     let currentPage = 0
-    let pageSize = parseInt(container.dataset.pageSize ?? "25", 10) || 25
+    let pageSize = normalizePageSize(container.dataset.pageSize)
     let searchTerm = ""
     const activeFilters = new Map<string, string>() // col -> value
     let sortCol = -1
@@ -296,42 +293,20 @@ function initPaginatedTables() {
     /**
      * Core update: filter → sort → paginate → render
      */
-    function updateView() {
-      // 1. Filter
-      let visibleRows = [...allRows]
-
-      if (searchTerm) {
-        visibleRows = visibleRows.filter((row) => {
-          const searchable = row.dataset.searchable ?? ""
-          return searchable.includes(searchTerm)
-        })
-      }
-
-      if (activeFilters.size > 0) {
-        visibleRows = visibleRows.filter((row) => {
-          for (const [col, val] of activeFilters) {
-            const cell = row.querySelector(
-              `td[data-col="${CSS.escape(col)}"]`,
-            ) as HTMLElement | null
-            if (!cell || cell.dataset.value !== val) return false
+    function updateView(recompute = false) {
+      // Reuse the current result when only the page or page size changed.
+      if (recompute) {
+        visibleRows = rowData.filter((data) => {
+          if (searchTerm && !data.searchable.includes(searchTerm)) return false
+          for (const [col, value] of activeFilters) {
+            if (data.values.get(col) !== value) return false
           }
           return true
         })
-      }
-
-      // 2. Sort
-      if (sortCol >= 0) {
-        visibleRows.sort((a, b) => {
-          const aCell = a.cells[sortCol]
-          const bCell = b.cells[sortCol]
-          if (!aCell || !bCell) return 0
-          const aText = (aCell.querySelector("a")?.textContent || aCell.textContent || "").trim()
-          const bText = (bCell.querySelector("a")?.textContent || bCell.textContent || "").trim()
-          return naturalCompare(aText, bText, sortDir)
-        })
-        // Re-append in sorted order
-        for (const row of visibleRows) {
-          tbody.appendChild(row)
+        if (sortCol >= 0) {
+          visibleRows.sort((a, b) =>
+            naturalCompare(a.sortValues[sortCol] ?? "", b.sortValues[sortCol] ?? "", sortDir),
+          )
         }
       }
 
@@ -343,12 +318,9 @@ function initPaginatedTables() {
       const start = currentPage * pageSize
       const end = Math.min(start + pageSize, totalVisible)
 
-      // Build set for quick lookup
-      const pageSet = new Set(visibleRows.slice(start, end))
-
-      for (const row of allRows) {
-        row.hidden = !pageSet.has(row)
-      }
+      // Keep only one page mounted. The server-rendered full table remains the
+      // no-JavaScript fallback, and cleanup restores it before SPA replacement.
+      tbody.replaceChildren(...visibleRows.slice(start, end).map((data) => data.row))
 
       // 4. Update controls
       if (pageInfo) {
@@ -361,7 +333,12 @@ function initPaginatedTables() {
       if (prevBtn) prevBtn.disabled = currentPage === 0
       if (nextBtn) nextBtn.disabled = currentPage >= totalPages - 1
 
-      // 5. Render filter chips using safe DOM methods
+      // Enhance newly mounted links without rerunning document-level plugins
+      // such as dark mode. Popovers capture this scoped, non-bubbling event.
+      tbody.dispatchEvent(new CustomEvent("render", { detail: {}, bubbles: false }))
+    }
+
+    function renderFilterChips() {
       if (filtersContainer) {
         filtersContainer.replaceChildren()
         for (const [col, val] of activeFilters) {
@@ -382,7 +359,8 @@ function initPaginatedTables() {
           chip.addEventListener("click", () => {
             activeFilters.delete(col)
             currentPage = 0
-            updateView()
+            renderFilterChips()
+            updateView(true)
           })
           filtersContainer.appendChild(chip)
         }
@@ -394,7 +372,7 @@ function initPaginatedTables() {
       const search = debounce(() => {
         searchTerm = searchInput.value.toLowerCase().trim()
         currentPage = 0
-        updateView()
+        updateView(true)
       }, 300)
       const onSearchInput = () => search.call()
       searchInput.addEventListener("input", onSearchInput)
@@ -428,7 +406,7 @@ function initPaginatedTables() {
 
     if (pageSizeSelect) {
       const handler = () => {
-        pageSize = parseInt(pageSizeSelect.value, 10) || 25
+        pageSize = normalizePageSize(pageSizeSelect.value)
         currentPage = 0
         updateView()
       }
@@ -449,7 +427,7 @@ function initPaginatedTables() {
         headers.forEach((h) => delete h.dataset.sort)
         th.dataset.sort = sortDir
         currentPage = 0
-        updateView()
+        updateView(true)
       }
       th.addEventListener("click", handler)
       window.addCleanup(() => th.removeEventListener("click", handler))
@@ -474,7 +452,8 @@ function initPaginatedTables() {
         activeFilters.set(col, val)
       }
       currentPage = 0
-      updateView()
+      renderFilterChips()
+      updateView(true)
     }
     tbody.addEventListener("click", cellClickHandler)
     window.addCleanup(() => tbody.removeEventListener("click", cellClickHandler))
@@ -482,10 +461,21 @@ function initPaginatedTables() {
     // Mark as initialized
     container.dataset.initialized = "true"
     window.addCleanup(() => {
+      tbody.replaceChildren(...allRows)
+      filtersContainer?.replaceChildren()
+      if (searchInput) searchInput.value = ""
+      if (pageSizeSelect)
+        pageSizeSelect.value = String(normalizePageSize(container.dataset.pageSize))
+      headers.forEach((header) => delete header.dataset.sort)
       container.dataset.initialized = "false"
     })
 
     // Initial render
     updateView()
   }
+}
+
+function normalizePageSize(value: string | undefined): number {
+  const size = Number(value)
+  return Number.isSafeInteger(size) && size > 0 ? size : 25
 }

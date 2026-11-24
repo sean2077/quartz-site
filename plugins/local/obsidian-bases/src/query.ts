@@ -1,5 +1,12 @@
 import type { QuartzPluginData } from "@quartz-community/types"
-import type { FilterExpression, FilterFn, BaseConfig, SortConfig, PropertyValue } from "./types.ts"
+import type {
+  FilterExpression,
+  FilterFn,
+  BaseConfig,
+  SortConfig,
+  PropertyValue,
+  ViewConfig,
+} from "./types.ts"
 
 /**
  * Parse a filter expression and return a filter function
@@ -7,7 +14,7 @@ import type { FilterExpression, FilterFn, BaseConfig, SortConfig, PropertyValue 
  * @param currentFile - The file containing the base block (for this.file references)
  */
 export function parseFilter(
-  expression: FilterExpression,
+  expression: FilterExpression | null | undefined,
   currentFile?: QuartzPluginData,
 ): FilterFn {
   // Handle nested logical structures
@@ -91,7 +98,8 @@ function normalizeTag(tag: unknown): string {
 }
 
 function getTags(file: QuartzPluginData): string[] {
-  const tags = file.frontmatter?.tags
+  // Raw Obsidian frontmatter may still contain a string before normalization.
+  const tags: unknown = file.frontmatter?.tags
   if (Array.isArray(tags)) return tags.map(normalizeTag).filter(Boolean)
   if (typeof tags === "string") {
     return tags
@@ -509,34 +517,58 @@ export function executeQuery(
   maxResults: number = 100,
   currentFile?: QuartzPluginData,
 ): QuartzPluginData[] {
-  let files = [...allFiles]
+  const files = filterGlobalFiles(allFiles, config, currentFile)
+  return queryView(files, allFiles, config.views?.[0], maxResults, currentFile)
+}
 
-  // Apply global filters (top-level)
-  if (config.filters) {
-    const filterFn = parseFilter(config.filters, currentFile)
-    files = files.filter((f) => filterFn(f, allFiles, currentFile))
-  }
+/** Query each tab independently, sharing only the base's global filter result. */
+export function executeViewQueries(
+  allFiles: QuartzPluginData[],
+  config: BaseConfig,
+  maxResults: number = 100,
+  currentFile?: QuartzPluginData,
+): QuartzPluginData[][] {
+  const files = filterGlobalFiles(allFiles, config, currentFile)
+  const views: ViewConfig[] = config.views ?? [{ type: "table", name: "Table" }]
+  return views.map((view) => queryView(files, allFiles, view, maxResults, currentFile))
+}
 
-  // Apply first view's config
-  const firstView = config.views?.[0]
+function filterGlobalFiles(
+  allFiles: QuartzPluginData[],
+  config: BaseConfig,
+  currentFile?: QuartzPluginData,
+): QuartzPluginData[] {
+  if (!config.filters) return allFiles
+  const filterFn = parseFilter(config.filters, currentFile)
+  return allFiles.filter((file) => filterFn(file, allFiles, currentFile))
+}
+
+function queryView(
+  globalFiles: QuartzPluginData[],
+  allFiles: QuartzPluginData[],
+  view: ViewConfig | undefined,
+  maxResults: number,
+  currentFile?: QuartzPluginData,
+): QuartzPluginData[] {
+  let files = globalFiles
 
   // Apply view-level filters (Obsidian puts filters inside views)
-  if (firstView?.filters) {
-    const viewFilterFn = parseFilter(firstView.filters, currentFile)
+  if (view?.filters) {
+    const viewFilterFn = parseFilter(view.filters, currentFile)
     files = files.filter((f) => viewFilterFn(f, allFiles, currentFile))
   }
 
   // Apply sort
-  if (firstView?.sort) {
-    files = sortFiles(files, firstView.sort)
+  if (view?.sort) {
+    files = sortFiles(files, view.sort)
   } else {
     // Default sort: by title
     files = sortFiles(files, [{ property: "file.name", direction: "asc" }])
   }
 
   // Apply limit (paginated-table views skip default cap — pagination handles display)
-  const isPaginated = firstView?.type === "paginated-table"
-  const limit = firstView?.limit ?? (isPaginated ? 0 : maxResults)
+  const isPaginated = view?.type === "paginated-table"
+  const limit = view?.limit ?? (isPaginated ? 0 : maxResults)
   if (limit > 0) {
     files = files.slice(0, limit)
   }

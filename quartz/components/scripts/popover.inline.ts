@@ -4,6 +4,7 @@ import { fetchCanonical } from "./util"
 
 const p = new DOMParser()
 let activeAnchor: HTMLAnchorElement | null = null
+const initializedLinks = new WeakSet<HTMLAnchorElement>()
 
 async function mouseEnterHandler(
   this: HTMLAnchorElement,
@@ -125,20 +126,24 @@ function clearActivePopover() {
   allPopoverElements.forEach((popoverElement) => popoverElement.classList.remove("active-popover"))
 }
 
-function setupPopovers() {
-  const links = [...document.querySelectorAll("a.internal")] as HTMLAnchorElement[]
+function setupPopovers(event: Event) {
+  const root = event.target instanceof Element ? event.target : document
+  const links = [...root.querySelectorAll("a.internal")] as HTMLAnchorElement[]
   for (const link of links) {
+    if (initializedLinks.has(link)) continue
+    initializedLinks.add(link)
     link.addEventListener("mouseenter", mouseEnterHandler)
     link.addEventListener("mouseleave", clearActivePopover)
     window.addCleanup(() => {
       link.removeEventListener("mouseenter", mouseEnterHandler)
       link.removeEventListener("mouseleave", clearActivePopover)
+      initializedLinks.delete(link)
     })
   }
 }
 
 document.addEventListener("nav", setupPopovers)
-document.addEventListener("render", setupPopovers)
+document.addEventListener("render", setupPopovers, { capture: true })
 window.addEventListener("pageshow", (event) => {
   if (!event.persisted) return
   activeAnchor = null

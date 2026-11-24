@@ -42,14 +42,11 @@ const defaultOptions: Options = {
 }
 
 export function isLocalAsset(url: string, extensions: Set<string>): boolean {
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("//")) {
-    return false
-  }
-  if (url.startsWith("data:")) {
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(url)) {
     return false
   }
 
-  const ext = path.extname(url).toLowerCase().split("?")[0]
+  const ext = path.posix.extname(normalizeAssetPath(url)).toLowerCase()
   return extensions.has(ext)
 }
 
@@ -72,7 +69,15 @@ export function resolveAssetReference(
   url: string,
   assetMap: Map<string, FilePath>,
 ): { source: FilePath; url: string } | undefined {
-  const source = resolveAsset(normalizeAssetPath(url), assetMap)
+  const normalized = normalizeAssetPath(url)
+  // CrawlLinks produces URLs relative to this page. Resolve that full path
+  // before trying vault-root paths and unambiguous Obsidian basename aliases.
+  const relativePath = path.posix.normalize(
+    path.posix.join(path.posix.dirname(currentSlug), normalized),
+  )
+  const source =
+    (!url.startsWith("/") ? assetMap.get(relativePath) : undefined) ??
+    resolveAsset(normalized, assetMap)
   if (source === undefined) return undefined
 
   const emittedPath = slugifyFilePath(source)
