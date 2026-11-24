@@ -289,18 +289,14 @@ export const PageTypeDispatcher: QuartzEmitterPlugin<Partial<DispatcherOptions>>
       ) as Set<FullSlug>
       const changedSlugs = new Set<string>()
       for (const changeEvent of changeEvents) {
-        if (path.extname(changeEvent.path).toLowerCase() === ".md") {
-          await removeStalePageOutput(
-            ctx.argv.output,
-            changeEvent.path,
-            currentSlugs,
-            changeEvent.file?.data.slug,
-          )
-        }
+        if (path.extname(changeEvent.path).toLowerCase() !== ".md") continue
 
-        if (changeEvent.type === "add" || changeEvent.type === "change") {
-          const slug = changeEvent.file?.data.slug
-          if (slug) changedSlugs.add(slug)
+        const slug = changeEvent.file?.data.slug ?? slugifyFilePath(changeEvent.path)
+        if (currentSlugs.has(slug)) {
+          // A remaining source may have taken ownership after a slug collision.
+          changedSlugs.add(slug)
+        } else {
+          await removeStalePageOutput(ctx.argv.output, changeEvent.path, currentSlugs, slug)
         }
       }
 
