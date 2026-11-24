@@ -104,6 +104,14 @@ body {
     color: var(--secondary);
   }
 
+  h3 {
+    color: #059669;
+  }
+
+  h4 {
+    color: #d97706;
+  }
+
   h2 {
     padding-bottom: 0.4rem;
     border-bottom: 1px solid var(--lightgray);
@@ -139,6 +147,29 @@ body {
   .table-container > table {
     margin-inline: 0;
   }
+}
+
+// Restore the heading and TOC accents the old background component enforced.
+:root[saved-theme="dark"] .page article {
+  h3 {
+    color: #34d399;
+  }
+
+  h4 {
+    color: #fbbf24;
+  }
+}
+
+.toc .depth-0 > a {
+  color: var(--secondary) !important;
+}
+
+.toc .depth-1 > a {
+  color: #059669 !important;
+}
+
+.toc .depth-2 > a {
+  color: #d97706 !important;
 }
 
 @media (min-width: 1201px) {
