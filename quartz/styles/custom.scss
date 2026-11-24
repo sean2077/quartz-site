@@ -29,19 +29,19 @@ body {
 .page {
   box-sizing: border-box;
   max-width: 1680px;
-  padding: 1rem;
+  padding: 0.5rem;
 }
 
 .page > #quartz-body {
-  column-gap: 1rem;
-  row-gap: 1rem;
+  column-gap: 0.5rem;
+  row-gap: 0.5rem;
 
   > .center {
     grid-area: grid-center;
     box-sizing: border-box;
     min-width: 0;
     width: 100%;
-    padding: 1.25rem clamp(1rem, 2.5vw, 2.5rem) 0.5rem;
+    padding: 1rem clamp(1rem, 1.8vw, 1.75rem) 0.5rem;
     background: var(--surface-reading);
     border: 1px solid var(--surface-border);
     border-radius: 12px;
@@ -66,19 +66,19 @@ body {
 
   > .sidebar {
     min-width: 0;
-    padding: 1.25rem 1rem;
+    padding: 1rem 0.85rem;
     background: var(--surface-sidebar);
     border: 1px solid var(--surface-border);
     border-radius: 12px;
-    height: calc(100dvh - 2rem);
-    top: 1rem;
+    height: calc(100dvh - 1rem);
+    top: 0.5rem;
   }
 
   > footer {
     box-sizing: border-box;
     min-width: 0;
     width: 100%;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.85rem;
   }
 }
 
@@ -108,7 +108,7 @@ body {
 
   h3 {
     color: #059669;
-    margin-top: 1.6rem;
+    margin-top: 1.4rem;
   }
 
   h4 {
@@ -116,7 +116,7 @@ body {
   }
 
   h2 {
-    margin-top: 2.1rem;
+    margin-top: 1.7rem;
     padding-bottom: 0.4rem;
     border-bottom: 1px solid var(--lightgray);
   }
@@ -162,7 +162,7 @@ body {
   // Native Bases and Markdown tables: compact rows, a card surface, and
   // dates kept on one line instead of wrapping inside a narrow column.
   .table-container {
-    margin-block: 1.25rem 1.5rem;
+    margin-block: 0.75rem 1rem;
     border: 1px solid var(--lightgray);
     border-radius: 10px;
     overflow-x: auto;
